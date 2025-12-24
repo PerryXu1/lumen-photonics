@@ -8,12 +8,8 @@ class Display(ABC):
 
     def __init__(self, light: Light):
         self.light = light
-        # TODO: remove the super().__init__() line
-        super().__init__()
 
-    # TODO: self has to be the first parameter for this
     @abstractmethod
-    def display():
+    def display(self):
         """A way to display the light data"""
-        # TODO: do pass or ... instead of return
-        return
+        pass
