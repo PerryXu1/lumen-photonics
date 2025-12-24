@@ -1,12 +1,18 @@
 from dataclasses import dataclass
-import numpy as np
+from enum import Enum
 
-# TODO: don't put the parenthesis; not needed
 @dataclass
-class Stokes():
+class Stokes:
     S0: float
     S1: float
     S2: float
     S3: float
+
+class StokesParameters(Enum):
+    S0 = 0
+    S1 = 1
+    S2 = 2
+    S3 = 3
+    
         
     
