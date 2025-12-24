@@ -1,4 +1,4 @@
-from collections.abc import Sequence, MutableSequence
+from collections.abc import Sequence
 from typing import Optional
 from component import Component
 from exceptions import MissingComponentException
