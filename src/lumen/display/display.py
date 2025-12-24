@@ -1,6 +1,4 @@
 from abc import abstractmethod, ABC
-# TODO: remove this import
-import numpy as np
 
 from lumen.dataclasses.light import Light
 
