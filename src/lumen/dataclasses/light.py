@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from dataclasses import dataclass
 from lumen.dataclasses.stokes import Stokes, StokesParameters
 import numpy as np
 
