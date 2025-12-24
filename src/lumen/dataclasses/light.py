@@ -1,18 +1,15 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from lumen.dataclasses.stokes import Stokes
+from lumen.dataclasses.stokes import Stokes, StokesParameters
 import numpy as np
 
 class Light:
     __slots__ = "e", "frequency", "phase"
     
-    # polarized light
     def __init__(self, phase: float, stokes: Stokes, frequency: float):
-        # TODO: format
         Ax = np.sqrt(0.5*(stokes.S0 + stokes.S1))
         Ay = np.sqrt(0.5*(stokes.S0 - stokes.S1))
         relative_phase = np.arctan2(stokes.S3, stokes.S2)
-
         eh = Ax*np.exp(1j*phase)
         ev = Ay*np.exp(1j*(phase + relative_phase))
 
@@ -20,44 +17,26 @@ class Light:
         self.frequency = frequency
         self.phase = phase
         
-    # TODO: def stokes(self, *, parameter: ...) -> float | Sequence
-    # TODO: remove @property 
-    @property
-    def stokes(self, parameter = int) -> float | Sequence:
-        # TODO: turn parameter into an enum. Example:
-        # 
-        # from enum import Enum
-        #
-        # class Color(Enum):
-        #     RED = 1
-        #     GREEN = 2
-        #     BLUE = 3
-        #  
-        # TODO: format the code
+    def stokes(self, *, parameter: StokesParameters) -> float | Sequence:
         if parameter is None:
             S0 = self.e[0] * np.conjugate(self.e[0]) + self.e[1] * np.conjugate(self.e[1]) 
             S1 = self.e[0] * np.conjugate(self.e[0]) - self.e[1] * np.conjugate(self.e[1])
             S2 = 2*np.real(np.conjugate(self.e[0])*self.e[1])
             S3 = 2*np.imag(np.conjugate(self.e[0])*self.e[1])
             return S0, S1, S2, S3
-        if parameter == 0:
+        
+        if parameter == StokesParameters.S0:
             return self.e[0] * np.conjugate(self.e[0]) + self.e[1] * np.conjugate(self.e[1])
-        if parameter == 1:
+        if parameter == StokesParameters.S1:
             return self.e[0] * np.conjugate(self.e[0]) - self.e[1] * np.conjugate(self.e[1])
-        if parameter == 2:
-            # TODO: return something
-            2*np.real(np.conjugate(self.e[0])*self.e[1])
-        if parameter == 3:
-            # TODO: return something
-            2*np.imag(np.conjugate(self.e[0])*self.e[1])
-
-        # TODO: custom exception
-        raise Exception("No such Stokes parameter")
+        if parameter == StokesParameters.S2:
+            return 2*np.real(np.conjugate(self.e[0])*self.e[1])
+        if parameter == StokesParameters.S3:
+            return 2*np.imag(np.conjugate(self.e[0])*self.e[1])
 
     @property
     def intensity(self) -> float:
-        # TODO: remember to change to enum
-        return self.stokes(0)
+        return self.stokes(StokesParameters.S0)
     
     @property
     def DOP(self) -> float:
