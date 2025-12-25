@@ -1,5 +1,5 @@
 from typing import Optional
-from component import Component
+from .component import Component
 
 class DuplicateAliasException(Exception):
     __slots__ = "alias", "message"
