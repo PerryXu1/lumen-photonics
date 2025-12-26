@@ -20,13 +20,13 @@ class PolarizationEllipse(Display):
     :type settings: DisplaySettings, optional
     """
     
-    _OMEGA = 0.5*np.pi # angular_frequency
+    _OMEGA = 0.5 * np.pi # angular_frequency
     _NUM_POINTS = 200 # amount of points used to graph the ellipse
     _AXIS_LIMIT = 1.25 # length of the axes
     _PERIODS = 3 # amount of periods shown in the animation
 
     DEFAULT_FPS = 60
-    DEFAULT_TOTAL_TIME = (_PERIODS * 2 * np.pi )/_OMEGA # total time for one loop of the naimation
+    DEFAULT_TOTAL_TIME = (_PERIODS * 2 * np.pi) / _OMEGA # total time for one loop of the naimation
     
     def __init__(self, light: Light, *, settings: Optional[DisplaySettings] = None):
         super().__init__(light, settings)
@@ -40,7 +40,7 @@ class PolarizationEllipse(Display):
         :type total_time: float, optional
         """
         
-        TOTAL_FRAMES = FPS * total_time
+        total_frames = int(FPS * total_time)
         
         # creating and positioning figure
         fig = super().create_fig()
@@ -90,23 +90,23 @@ class PolarizationEllipse(Display):
          
         # progress bar
         footer_pos = gs[1].get_position(fig)
-        BAR_WIDTH = 0.6
-        BAR_HEIGHT = 0.03
-        BAR_X = 0.2
-        BAR_Y = (footer_pos.height / 2)
+        bar_width = 0.6
+        bar_height = 0.03
+        bar_x = 0.2
+        bar_y = (footer_pos.height / 2)
         
-        bar_bg = Rectangle((BAR_X, BAR_Y), BAR_WIDTH, BAR_HEIGHT, 
+        bar_bg = Rectangle((bar_x, bar_y), bar_width, bar_height, 
                         transform=fig.transFigure, color='gray', alpha=0.2)
-        bar_fill = Rectangle((BAR_X, BAR_Y), 0.0, BAR_HEIGHT, 
+        bar_fill = Rectangle((bar_x, bar_y), 0.0, bar_height, 
                             transform=fig.transFigure, color='blue', alpha=0.8)
-        phase_text = fig.text(BAR_X + BAR_WIDTH + 0.02, BAR_Y + BAR_HEIGHT/2, '', 
+        phase_text = fig.text(bar_x + bar_width + 0.02, bar_y + bar_height/2, '', 
                             transform=fig.transFigure, fontsize=10, va='center')
         
         fig.patches.extend([bar_bg, bar_fill])
         
         # update function, called once per frame in FuncAnimation to update the point and progress bar
         def update(frame: int) -> Sequence[Line2D]:
-            progress = frame/TOTAL_FRAMES
+            progress = frame/total_frames
             t = progress*total_time
             current_phase = (self._OMEGA * t) % (2 * np.pi)
             
@@ -126,7 +126,7 @@ class PolarizationEllipse(Display):
         anim = FuncAnimation(
             fig,
             update,
-            frames=int(total_time*FPS),
+            frames=total_frames,
             interval=1000/FPS,
             blit=False,
             repeat=True
