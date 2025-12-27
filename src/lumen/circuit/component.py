@@ -22,9 +22,6 @@ class Component(ABC):
     __slots__ = "name", "s_matrix", "inputs", "outputs"
 
     def __init__(self, name: str, num_inputs: int, num_outputs: int, s_matrix: np.ndarray):
-        """Constructor method
-        """
-        
         self.id = uuid4()
         self.name = name
         
