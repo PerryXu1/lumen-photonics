@@ -35,7 +35,8 @@ class Component(ABC):
         # list of inputs/outputs
         self.input_ports = [Port(self) for _ in range(num_inputs)]
         self.output_ports = [Port(self) for _ in range(num_outputs)]
-        self.in_degree
+        self.in_degree = 0
+        self.out_degree = 0
 
     def search_by_input_alias(self, alias: str) -> Port:
         """Returns the input port referred to by a previously-set alias for the port. If the alias

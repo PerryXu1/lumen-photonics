@@ -2,7 +2,10 @@ from abc import ABC
 from dataclasses import dataclass, field
 from typing import Optional
 from uuid import UUID, uuid4
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from ..circuit.component import Component 
 
 class Connection(ABC):
     """Connection abstract base class that cannot be instantiated."""
@@ -20,16 +23,18 @@ class Connection(ABC):
 class Port:
     """Class that represents a port of a component.
 
+    :param component: The component that the port is a part of
+    :type component: Component
     :param connected_port: The other port that the port is connected to
     :type connected_port: Port
     :param alias: Alias of the port, which can be used to identify it
     :type alias: str, optional
     """
 
-    connection: Connection
+    component: "Component"
+    connection: Connection = None
     alias: Optional[str]
     id: UUID = field(default_factory=uuid4)
-
 
 def singleton(cls):
     """Injects singleton behavior into a class."""
