@@ -1,6 +1,7 @@
 from .component import Component
-from .exceptions import DuplicateAliasException, MissingAliasException, MissingComponentException
+from .exceptions import DuplicateAliasException, MissingAliasException, MissingPortException
 from .photonic_circuit import PhotonicCircuit
 
 __all__ = ['Component', 'DuplicateAliasException',
-           'MissingAliasException', 'MissingComponentException', 'PhotonicCircuit']
+           'MissingAliasException', 'MissingPortException',
+           'MissingComponentException', 'PhotonicCircuit']
