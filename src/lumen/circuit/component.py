@@ -1,6 +1,7 @@
 from abc import ABC
 from typing import TypeVar
 import numpy as np
+from circuit.exceptions import MissingPortException
 from ..models.port import Port
 from uuid import uuid4
 
@@ -19,7 +20,7 @@ class Component(ABC):
     :type s_matrix: numpy ndarray
     """
     
-    __slots__ = "name", "s_matrix", "inputs", "outputs"
+    __slots__ = "name", "s_matrix", "input_ports", "output_ports", "in_degree", "out_degree"
 
     def __init__(self, name: str, num_inputs: int, num_outputs: int, s_matrix: np.ndarray):
         self.id = uuid4()
@@ -32,8 +33,9 @@ class Component(ABC):
         self.s_matrix = s_matrix
     
         # list of inputs/outputs
-        self.inputs = [Port(self) for _ in range(num_inputs)]
-        self.outputs = [Port(self) for _ in range(num_outputs)]
+        self.input_ports = [Port(self) for _ in range(num_inputs)]
+        self.output_ports = [Port(self) for _ in range(num_outputs)]
+        self.in_degree
 
     def search_by_input_alias(self, alias: str) -> Port:
         """Returns the input port referred to by a previously-set alias for the port. If the alias
@@ -47,7 +49,7 @@ class Component(ABC):
         """
         
         from .exceptions import MissingAliasException
-        for input_port in self.inputs:
+        for input_port in self.input_ports:
             if input_port.alias == alias:
                 return input_port
         raise MissingAliasException(alias)
@@ -64,13 +66,13 @@ class Component(ABC):
         """
         
         from .exceptions import MissingAliasException
-        for output_port in self.outputs:
+        for output_port in self.output_ports:
             if output_port.alias == alias:
                 return output_port
         raise MissingAliasException(alias)
     
     def set_input_alias(self, index: int, alias: str) -> None:
-        """Sets the alias of the specified input port to the specified name
+        """Sets the alias of the specified input port to the specified name.
         
         :param index: The index of the input port which will have their alias set
         :type index: int
@@ -79,13 +81,13 @@ class Component(ABC):
         """
         
         from .exceptions import DuplicateAliasException
-        for input_port in self.inputs:
+        for input_port in self.input_ports:
             if alias in input_port.alias:
                 raise DuplicateAliasException(alias)
-        self.inputs[index].alias = alias
+        self.input_ports[index].alias = alias
 
     def set_output_alias(self, index: int, alias: str) -> None:
-        """Sets the alias of the specified output port to the specified name
+        """Sets the alias of the specified output port to the specified name.
         
         :param index: The index of the output port which will have their alias set
         :type index: int
@@ -93,13 +95,13 @@ class Component(ABC):
         :type alias: str
         """
         from .exceptions import DuplicateAliasException
-        for output_port in self.outputs:
+        for output_port in self.output_ports:
             if alias in output_port.alias:
                 raise DuplicateAliasException(alias)
-        self.outputs[index].alias = alias
+        self.output_ports[index].alias = alias
 
     def set_input(self, input_port_name: int | str, component: T, output_port_name: int | str) -> None:
-        """Connects a component's input port with another component's output port
+        """Connects a component's input port with another component's output port.
         
         :param input_port_name: The index or alias of the output port
         :type input_port_name: int, str
@@ -112,19 +114,22 @@ class Component(ABC):
         # int passed in -> identify port by index
         # str passed in -> identify port by alias
         if isinstance(output_port_name, int):
-            output_port = component.outputs[output_port_name]
+            output_port = component.output_ports[output_port_name]
         elif isinstance(output_port_name, str):
             output_port = component.search_by_output_alias(output_port_name) 
         
         if isinstance(input_port_name, int):
-            input_port = self.inputs[input_port_name]
+            input_port = self.input_ports[input_port_name]
         elif isinstance(input_port_name, str):
             input_port = self.search_by_input_alias(input_port_name) 
         
-        input_port.connected_port = output_port
+        
+        if input_port.connection is None:
+            self.in_degree += 1
+        input_port.connection = output_port
     
     def set_output(self, output_port_name: int | str, component: T, input_port_name: int | str) -> None:
-        """Connects a component's output port with another component's input port
+        """Connects a component's output port with another component's input port.
         
         :param input_port_name: The index or alias of the input port
         :type input_port_name: int, str
@@ -134,17 +139,50 @@ class Component(ABC):
         :type input_port_name: int, str  
         """
         
-         # int passed in -> identify port by index
+        # int passed in -> identify port by index
         # str passed in -> identify port by alias
         if isinstance(output_port_name, int):
-            output_port = self.outputs[output_port_name]
+            output_port = self.output_ports[output_port_name]
         elif isinstance(output_port_name, str):
             output_port = self.search_by_output_alias(output_port_name) 
         
         if isinstance(input_port_name, int):
-            input_port = component.inputs[input_port_name]
+            input_port = component.input_ports[input_port_name]
         elif isinstance(input_port_name, str):
             input_port = component.search_by_input_alias(input_port_name) 
         
-        output_port.connected_port = input_port
-    
+        if output_port.connection is None:
+            self.out_degree += 1
+        output_port.connection = input_port
+        
+    def disconnect_input(self, input_port_name: int | str):
+        """Disconnects the specified input.
+        
+        :param input_port_name: The index or alias of the input port
+        :type input_port_name: int, str
+        """
+        
+        if isinstance(input_port_name, int):
+            input_port = self.input_ports[input_port_name]
+        elif isinstance(input_port_name, str):
+            input_port = self.search_by_input_alias(input_port_name) 
+        
+        if input_port.connection is not None:
+            self.in_degree -= 1
+        input_port.connection = None
+
+    def disconnect_output(self, output_port_name: int | str):
+        """Disconnects the specified output.
+        
+        :param output_port_name: The index or alias of the output port
+        :type output_port_name: int, str
+        """
+        
+        if isinstance(output_port_name, int):
+            output_port = self.input_ports[output_port_name]
+        elif isinstance(output_port_name, str):
+            output_port = self.search_by_input_alias(output_port_name) 
+        
+        if output_port.connection is not None:
+            self.out_degree -= 1
+        output_port.connection = None
