@@ -19,7 +19,7 @@ class Component(ABC):
     :type s_matrix: numpy ndarray
     """
     
-    __slots__ = "name", "s_matrix", "input_ports", "output_ports", "in_degree", "out_degree"
+    __slots__ = "name", "_s_matrix", "_input_ports", "_output_ports", "_in_degree", "_out_degree"
 
     def __init__(self, name: str, num_inputs: int, num_outputs: int, s_matrix: np.ndarray):
         self.id = uuid4()
