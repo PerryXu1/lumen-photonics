@@ -31,7 +31,7 @@ class Port:
     :type alias: str, optional
     """
 
-    def __init__(self, component: "Component", /, *, connection: Optional["Component"] = None, alias: Optional[str] = None):
+    def __init__(self, component: "Component", /, *, connection: Optional["Connection"] = None, alias: Optional[str] = None):
         self._id = uuid4()
         self._component = component
         self.connection = connection
