@@ -17,7 +17,7 @@ class PhotonicCircuit:
     def __init__(self):
         self.id = uuid4()
         self._components: Optional[Component] = [] # list of components in the circuit
-        self.circuit_inputs: MutableMapping[Port] = {} # the ports that the laser light inputs to
+        self.circuit_inputs: MutableMapping[Port, Laser] = {} # the ports that the laser light inputs to
         self.circuit_outputs: MutableSequence[Port] = [] # the ports at which the final state is desired
 
         # TODO: make it so it takes in Component + index/alias, not port directly
@@ -97,6 +97,10 @@ class PhotonicCircuit:
             
         component1.connect_output_port(output_name, component2, input_name)
         component2.connect_input_port(input_name, component1, output_name)
+    
+    def _connect_by_port(self, port1: Port, port2: Port) -> None:
+        port1.connection = PortConnection(port2)
+        port2.connection = PortConnection(port1)
 
     def disconnect_by_input(self, component: Component, input_port_name: str | int) -> None:
         """Disconnects a component's input from another component's output and vice versa.
