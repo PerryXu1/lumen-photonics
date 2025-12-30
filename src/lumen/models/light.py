@@ -18,19 +18,24 @@ class Light:
     
     __slots__ = "e", "frequency", "phase"
 
-    def __init__(self, *, phase: float, stokes: Stokes, frequency: float):
+    def __init__(self, eh: complex, ev: complex):
+        self.e = np.array([eh, ev])
+        
+    @classmethod
+    def from_jones(cls, eh: complex, ev: complex):
+        return cls(eh, ev)
+    
+    @classmethod
+    def from_stokes(cls, stokes: Stokes, global_phase: float = 0):
         Ax = np.sqrt(0.5*(stokes.S0 + stokes.S1))
         Ay = np.sqrt(0.5*(stokes.S0 - stokes.S1))
         
         # phase of the V component relative to the H component
         # + phase means V is ahead of H
         relative_phase = np.arctan2(stokes.S3, stokes.S2)
-        eh = Ax*np.exp(1j*phase)
-        ev = Ay*np.exp(1j*(phase + relative_phase))
-
-        self.e = np.array([eh, ev])
-        self.frequency = frequency
-        self.phase = phase
+        eh = Ax*np.exp(1j*global_phase)
+        ev = Ay*np.exp(1j*(global_phase + relative_phase))
+        return cls(eh, ev)
 
     def stokes_parameter(self, parameter: StokesParameters, /) -> float:
         """Gets the specified Stokes parameter associated with the light.
