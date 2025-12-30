@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 class Connection(ABC):
     """Connection abstract base class that cannot be instantiated."""
 
-    def __new__(cls):
+    def __new__(cls, *args, **kwargs):
         """Prevents the class from being instantiated directly
         """
 
