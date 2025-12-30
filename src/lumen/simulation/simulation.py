@@ -3,12 +3,11 @@ from enum import Enum
 import numpy as np
 from typing import Annotated, Literal
 from numpy.typing import NDArray
-from scipy.sparse import block_diag, csr_matrix, coo_matrix, linalg
-import scipy as sp
+from scipy.sparse import block_diag, csr_matrix, csc_matrix, coo_matrix, linalg, eye
 
 from ..models.light import Light
 from ..circuit.components.condensed_component import _CondensedComponent
-from ..models.port import Port, PortConnection
+from ..models.port import InputConnection, OutputConnection, Port, PortConnection
 from ..circuit.photonic_circuit import PhotonicCircuit
 from ..circuit.component import Component
 import copy
@@ -38,9 +37,16 @@ class Simulation:
         sequential_paths = []
         for anchor_node in anchor_nodes:
             for output_port in anchor_node._output_ports:
-                sequential_path = self._find_sequential_path(output_port, anchor_nodes)
-                if len(sequential_path) >= 2:
-                    sequential_paths.append(sequential_path)
+                connection = output_port.connection
+                if isinstance(connection, PortConnection):
+                    component = connection.port.component
+                    sequential_path = self._find_sequential_path(component, anchor_nodes)
+                    if len(sequential_path) >= 2:
+                        sequential_paths.append(sequential_path)
+        for input_port in photonic_circuit.circuit_inputs:
+            sequential_path = self._find_sequential_path(input_port.component, anchor_nodes)
+            if len(sequential_path) >= 2:
+                sequential_paths.append(sequential_path)
         
         # collapse each sequential path
         for sequential_path in sequential_paths:
@@ -55,6 +61,7 @@ class Simulation:
                 port_to_index[input_port] = num_ports
                 index_to_port.append(input_port)
                 num_ports += 1
+        for component in photonic_circuit.components:
             for output_port in component._output_ports:
                 port_to_index[output_port] = num_ports
                 index_to_port.append(output_port)
@@ -66,20 +73,19 @@ class Simulation:
         
         # Connectivity matrix
         connectivity_matrix = self._get_connectivity_matrix(photonic_circuit, num_ports, port_to_index)
-        
+
         # making (I - SC)
-        dimension = connectivity_matrix.get_shape()[0] # S, C, and SC have the same dimensions
-        identity = np.eye(dimension)
+        dimension = connectivity_matrix.shape[0] # S, C, and SC have the same dimensions
+        identity = eye(dimension)
         
         global_matrix = identity - (global_s_matrix @ connectivity_matrix)
-        
         solver = self._select_solver(global_matrix)
-        
         for time in times:
             input_vector = self._get_input_vector(photonic_circuit, global_s_matrix,
                                                   num_ports, port_to_index, time)
             
             if solver == MatrixSolver.DENSE:
+                global_matrix = global_matrix.toarray() # convert to dense format for dense solver
                 output_vector = np.linalg.solve(global_matrix, input_vector)
             elif solver == MatrixSolver.SPARSE:
                 output_vector = linalg.spsolve(global_matrix, input_vector)
@@ -91,17 +97,13 @@ class Simulation:
                 light = Light.from_jones(output_vector[light_state_index],
                                          output_vector[light_state_index + 1])
                 solutions.append(light)
-            
+
         return solutions
             
-    def _find_sequential_path(self, output_port: Port,
+    def _find_sequential_path(self, component: Component,
                                anchor_nodes: MutableSequence[Component]) -> MutableSequence[Component]:
         sequential_nodes = []
-        current_connection = output_port.connection
-        if not isinstance(current_connection, PortConnection):
-            return sequential_nodes
-        current_component = current_connection.port.component
-        
+        current_component = component
         while current_component not in anchor_nodes:
             sequential_nodes.append(current_component)
             # if sequential, there will only be one output port: _output_ports[0]
@@ -122,13 +124,12 @@ class Simulation:
         photonic_circuit.add(condensed_component)
         
         self._replace_nodes(photonic_circuit, sequential_path, condensed_component)
-
     
     def _replace_nodes(self, photonic_circuit: PhotonicCircuit, node_list: MutableSequence[Component],
                        replacement_node: Component) -> None:
         # input and output ports of the replacement node is the input/output of the ends of the node list
         replacement_node_input = node_list[0]._input_ports[0]
-        replacement_node_output = node_list[1]._output_ports[0]
+        replacement_node_output = node_list[-1]._output_ports[0]
         
         # connections referring to the ports that connect to the input/output of the replacement node
         previous_node_output = replacement_node_input.connection
@@ -140,12 +141,20 @@ class Simulation:
         else:
             # either None or InputConnection 
             replacement_node._input_ports[0].connection = previous_node_output
+            if isinstance(previous_node_output, InputConnection):
+                laser = photonic_circuit.circuit_inputs.get(replacement_node_input)
+                photonic_circuit.circuit_inputs.pop(replacement_node_input)
+                photonic_circuit.circuit_inputs[replacement_node._input_ports[0]] = laser
+                
         if isinstance(next_node_input, PortConnection):
             next_node_input_port = next_node_input.port
             photonic_circuit._connect_by_port(next_node_input_port, replacement_node._output_ports[0])
         else:
-            # either None of OutputConnection
+            # either None or OutputConnection
             replacement_node._output_ports[0].connection = next_node_input
+            if isinstance(next_node_input, OutputConnection):
+                index = photonic_circuit.circuit_outputs.index(replacement_node_output)
+                photonic_circuit.circuit_outputs[index] = replacement_node._output_ports[0]
         
         # remove connections to old node list
         replacement_node_input.connection = None
@@ -155,19 +164,20 @@ class Simulation:
             photonic_circuit._components.remove(node)
     
     def _redheffer_star(self, A: SMatrix4x4, B: SMatrix4x4) -> SMatrix4x4:
-        # A and B are 2x2 block matrices
-        # Redheffer star for sequential components -> 1 input, 1 output -> N = 2
-        # This results in a 4x4 matrix
-        # can split matrix by partioning the rows and columns in half
-        
-        # all block matrices are 2x2
         A11, A12, A21, A22 = self._get_blocks(A)
         B11, B12, B21, B22 = self._get_blocks(B)
         I = np.eye(2)
-        star11 = B11 @ np.linalg.inv(I - (A12 @ B21)) @ A11
-        star12 = B12 + (B11 @ np.linalg.inv(I - (A12 @ B21)) @ A12 @ B22)
-        star21 = A21 + (A22 @ np.linalg.inv(I - (B21 @ A12)) @ B12 @ A11)
-        star22 = A22 @ np.linalg.inv(I - (B21 @ A12)) @ B22
+        
+        # 1. The Denominator terms (Feedback loops)
+        # Light bouncing between the back of A (A22) and front of B (B11)
+        D1 = np.linalg.inv(I - A22 @ B11)
+        D2 = np.linalg.inv(I - B11 @ A22)
+
+        # 2. The Star Product Blocks
+        star11 = A11 + A12 @ B11 @ D1 @ A21
+        star12 = A12 @ D1 @ B12
+        star21 = B21 @ D2 @ A21
+        star22 = B22 + B21 @ A22 @ D2 @ B12
         
         return np.block([
             [star11, star12],
@@ -180,51 +190,43 @@ class Simulation:
     def _get_connectivity_matrix(self, photonic_circuit: PhotonicCircuit, num_ports: int,
                                  ports_to_index: MutableMapping[Port, int]) -> csr_matrix:
             
-        rows = np.zeros(2 * num_ports, dtype=int)
-        cols = np.zeros(2 * num_ports, dtype=int)
-        data = np.ones(2 * num_ports, dtype=int)
+        rows = []
+        cols = []
         
-        start_index = 0
         for component in photonic_circuit.components:
             for output_port in component._output_ports:
-                if isinstance(output_port, PortConnection):
+                if isinstance(output_port.connection, PortConnection):
                     port_index_1 = ports_to_index[output_port]
                     port_index_2 = ports_to_index[output_port.connection.port]
-                    
+                                        
                     # H state stored first, then V state
                     p1h, p1v = 2*port_index_1, 2*port_index_1 + 1
                     p2h, p2v = 2*port_index_2, 2*port_index_2 + 1
-                 
-                    rows[start_index, start_index + 4] = [p1h, p2h, p1v, p2v]
-                    cols[start_index, start_index + 4] = [p2h, p1h, p2v, p1v]
+
+                    rows.extend([p1h, p2h, p1v, p2v])
+                    cols.extend([p2h, p1h, p2v, p1v])
                     
-                    start_index += 4
+        data = np.ones(len(rows), dtype=int)
         
-        return coo_matrix((data, (rows, cols)), shape=(2 * num_ports, 2 * num_ports)).tocsc
+        return coo_matrix((data, (rows, cols)), shape=(2 * num_ports, 2 * num_ports)).tocsc()
     
     def _get_input_vector(self, photonic_circuit: PhotonicCircuit, 
                           global_s_matrix: csr_matrix, num_ports: int,
                           port_to_index: MutableMapping[Port, int], time: float) -> csr_matrix:
         # inputs, then outputs
         a_ext = np.zeros(2*num_ports, dtype=complex)
-        for circuit_input_port, laser in photonic_circuit.circuit_inputs:
+        for circuit_input_port, laser in photonic_circuit.circuit_inputs.items():
             port_index = port_to_index[circuit_input_port]
             h_index = 2*port_index
             v_index = 2*port_index + 1
-            a_ext[h_index] = laser.light_func(time).e[0]
-            a_ext[v_index] = laser.light_func(time).e[1]
-        for circuit_output_port, laser in photonic_circuit.circuit_outputs:
-            port_index = port_to_index[circuit_output_port]
-            h_index = 2*port_index
-            v_index = 2*port_index + 1
-            a_ext[h_index] = laser.light_func(time).e[0]
-            a_ext[v_index] = laser.light_func(time).e[1]
+            a_ext[h_index] = laser(time).e[0]
+            a_ext[v_index] = laser(time).e[1]
         
         return global_s_matrix @ a_ext
 
-    def _select_solver(A: csr_matrix) -> MatrixSolver:
+    def _select_solver(self, A: csc_matrix) -> MatrixSolver:
         dim = A.shape[0]
-        density = A.nnz / (dim ** 2)
+        density = A.getnnz() / (dim ** 2)
         estimated_dense_size_gb = ((dim ** 2) * 16) / (1024 ** 3)
         
         # sparse overhead too large compared to dense
