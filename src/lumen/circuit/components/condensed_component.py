@@ -4,7 +4,9 @@ import numpy as np
 class _CondensedComponent(Component):
     """
     """
-    __slots__ = "s_matrix"
+    __slots__ = ("id", "name", "_s_matrix", "_num_inputs", "_input_ports", "_input_port_aliases",
+                "_input_port_ids", "_num_outputs", "_output_ports", "_output_port_aliases",
+                "_output_port_ids", "_in_degree", "_out_degree")
     _COMPONENT_NAME = "CONDENSED_COMPONENT"
 
     def __init__(self, s_matrix: np.ndarray):
