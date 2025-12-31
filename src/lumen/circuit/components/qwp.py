@@ -18,13 +18,13 @@ class QWP(Component):
 
     def __init__(self, fast_axis: Literal["vertical", "horizontal"]):
         if fast_axis == "vertical":
-            s_matrix =  np.array([[0, 0, 1j, 0],
+            s_matrix =  np.array([[0, 0, -1j, 0],
                                   [0, 0, 0, 1],
-                                  [1j, 0, 0, 0],
+                                  [-1j, 0, 0, 0],
                                   [0, 1, 0, 0]])
         elif fast_axis == "horizontal":
             s_matrix =  np.array([[0, 0, 1, 0],
-                                  [0, 0, 0, 1j],
+                                  [0, 0, 0, -1j],
                                   [1, 0, 0, 0],
-                                  [0, 1j, 0, 0]])
+                                  [0, -1j, 0, 0]])
         super().__init__(self._COMPONENT_NAME, 1, 1, s_matrix)
