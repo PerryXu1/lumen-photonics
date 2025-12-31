@@ -79,9 +79,6 @@ class PhotonicCircuit:
 
         component1, output_name = source
         component2, input_name = destination
-        print(self._components)
-        
-        print(component1, component2)
 
         if component1 not in self._components or component2 not in self._components:
             raise MissingComponentException(
