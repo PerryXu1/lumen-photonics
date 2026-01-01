@@ -5,7 +5,6 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from lumen.models.light import Light
 
-
 @dataclass(frozen=True, slots=True)
 class DisplaySettings:
     """Class that stores display settings, which can be optionally passed into a

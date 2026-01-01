@@ -140,9 +140,9 @@ class PolarizationView3D(Display):
 
             # update vertical, horizontal polarization curve
             eh_vals = ((self.light.e[0] *
-                       np.exp(1j * (self._K*z_array - self._OMEGA*t)))/np.abs(self.light.e[0])).real
+                       np.exp(1j * (self._OMEGA*t - self._K*z_array)))/np.abs(self.light.e[0])).real
             ev_vals = ((self.light.e[1] *
-                       np.exp(1j * (self._K*z_array - self._OMEGA*t)))/np.abs(self.light.e[1])).real
+                       np.exp(1j * (self._OMEGA*t - self._K*z_array)))/np.abs(self.light.e[1])).real
 
             # set plot data
             eh_plot.set_data(eh_vals, np.zeros_like(z_array))
@@ -155,8 +155,8 @@ class PolarizationView3D(Display):
             e_plot.set_3d_properties(z_array)
 
             # update point on total polarization curve where r = 0
-            current_point_plot.set_data([((self.light.e[0] * np.exp(1j * (-self._OMEGA*t)))/np.abs(self.light.e[0])).real],
-                                        [((self.light.e[1] * np.exp(1j * (-self._OMEGA*t)))/np.abs(self.light.e[1])).real])
+            current_point_plot.set_data([((self.light.e[0] * np.exp(1j * (self._OMEGA*t)))/np.abs(self.light.e[0])).real],
+                                        [((self.light.e[1] * np.exp(1j * (self._OMEGA*t)))/np.abs(self.light.e[1])).real])
             current_point_plot.set_3d_properties([0])
             
             # update progress bar

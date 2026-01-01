@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from typing import Optional
 
+from matplotlib.text import Text
 from matplotlib.animation import FuncAnimation
 from matplotlib.lines import Line2D
 from ..models.light import Light
@@ -62,8 +63,8 @@ class PolarizationEllipse(Display):
         # plot static ellipse
         phase = np.linspace(0, 2*np.pi, self._NUM_POINTS)
         eh, ev = self.light.e
-        eh = ((eh * np.exp(-1j * phase))/np.abs(eh)).real
-        ev = ((ev * np.exp(-1j * phase))/np.abs(ev)).real
+        eh = ((eh * np.exp(1j * phase))/np.abs(eh)).real
+        ev = ((ev * np.exp(1j * phase))/np.abs(ev)).real
         ax.plot(eh, ev, label="Polarization Ellipse", color='blue', linewidth=2, linestyle='-')
         
         # plot arrow to show chirality
@@ -105,14 +106,22 @@ class PolarizationEllipse(Display):
         fig.patches.extend([bar_bg, bar_fill])
         
         # update function, called once per frame in FuncAnimation to update the point and progress bar
-        def update(frame: int) -> Sequence[Line2D]:
+        def update(frame: int) -> Sequence[Line2D, Rectangle, Text]:
+            """Function used in FuncAnimation to update graphics every animation frame.
+            
+            :param frame: The frame number of the specified frame in the animation
+            :type frame: int
+            :return: The updated point, the updated progress bar rectangle, and the updated
+                updated phase text
+            :rtype:
+            """
             progress = frame/total_frames
             t = progress*total_time
             current_phase = (self._OMEGA * t) % (2 * np.pi)
             
             # update point position
-            point.set_data([((self.light.e[0] * np.exp(1j * (-self._OMEGA*t)))/np.abs(self.light.e[0])).real],
-                                        [((self.light.e[1] * np.exp(1j * (-self._OMEGA*t)))/np.abs(self.light.e[1])).real])
+            point.set_data([((self.light.e[0] * np.exp(1j * (self._OMEGA*t)))/np.abs(self.light.e[0])).real],
+                                        [((self.light.e[1] * np.exp(1j * (self._OMEGA*t)))/np.abs(self.light.e[1])).real])
             
             # update progress bar
             progress_ratio = current_phase / (2 * np.pi)

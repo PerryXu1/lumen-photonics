@@ -98,6 +98,14 @@ class PhotonicCircuit:
             input_name, to=PortRef(component1, output_name))
 
     def _connect_by_port(self, port1: Port, port2: Port) -> None:
+        """Helper function used in simulation to connect ports directly.
+        
+        :param port1: The first port to be connected
+        :type port1: Port
+        :param port2: The second port to be connected
+        :type port2: Port
+        """
+        
         port1.connection = PortConnection(port2)
         port2.connection = PortConnection(port1)
 
@@ -107,6 +115,7 @@ class PhotonicCircuit:
         :param port_ref: The component and input port to be disconntected
         :type port_ref: PortRef
         """
+        
         component, input_port_name = port_ref
 
         if component not in self._components:
@@ -126,6 +135,7 @@ class PhotonicCircuit:
         :param port_ref: The component and output port to be disconntected
         :type port_ref: PortRef
         """
+        
         component, output_port_name = port_ref
 
         if component not in self._components:
@@ -151,6 +161,14 @@ class PhotonicCircuit:
         return self._components
 
     def _get_input_port_from_ref(self, port_ref: PortRef) -> Port:
+        """Helper function to get the input port from the specified port reference.
+        
+        :param port_ref: The specified port reference
+        :type port_ref: PortRef
+        :return: The port specified by the port reference
+        :rtype: Port
+        """
+        
         from .exceptions import MissingAliasException
 
         component, port_name = port_ref
@@ -165,6 +183,14 @@ class PhotonicCircuit:
         return port
 
     def _get_output_port_from_ref(self, port_ref: PortRef) -> Port:
+        """Helper function to get the output port from the specified port reference.
+        
+        :param port_ref: The specified port reference
+        :type port_ref: PortRef
+        :return: The port specified by the port reference
+        :rtype: Port
+        """
+        
         from .exceptions import MissingAliasException
 
         component, port_name = port_ref

@@ -1,8 +1,9 @@
 from abc import ABC
 from collections.abc import Iterator
-from dataclasses import astuple, dataclass
-from typing import Any, TypeVar
+from dataclasses import dataclass
+from typing import TypeVar
 import numpy as np
+from numpy.typing import NDArray
 from ..models.port import Port, PortConnection
 from uuid import uuid4
 
@@ -11,6 +12,16 @@ T = TypeVar("T", bound="Component")
 
 @dataclass(frozen=True, slots=True)
 class PortRef:
+    """Class used to specify a port belonging to a component. Whether the port specified
+    is an input or output port depends on the context of the method this class is being
+    passed into.
+    
+    :param component: The component that the port belongs to
+    :type component: Component
+    :param port_name: The index or alias of the port
+    :type port_name: str or int
+    """
+    
     component: T
     port_name: str | int
 
@@ -35,42 +46,39 @@ class Component(ABC):
     :param num_outputs: The amount of outputs that the component has
     :type num_outputs: int
     :param s_matrix: The matrix used to model the component mathematically. This matrix follows the
-    physics convention, where the electric field propagates as e^i(k z - omega t). This means that
-    a delay results in a negative phase shift. For an S-matrix found in an engineering context, 
+    engineering convention, where the electric field propagates as e^i(omega t - k z). This means
+    that a delay results in a negative phase shift. For an S-matrix found in an physics context, 
     replace every j with -j
-    :type s_matrix: numpy ndarray
+    :type s_matrix: np.ndarray[np.complex128]
     """
 
     __slots__ = ("id", "name", "_s_matrix", "_num_inputs", "_input_ports", "_input_port_aliases",
                  "_input_port_ids", "_num_outputs", "_output_ports", "_output_port_aliases",
                  "_output_port_ids", "_in_degree", "_out_degree")
 
-    def __init__(self, name: str, num_inputs: int, num_outputs: int, s_matrix: np.ndarray):
+    def __init__(self, name: str, num_inputs: int, num_outputs: int, s_matrix: NDArray[np.complex128]):
         self.id = uuid4()
         self.name = name
-
         # Modified S Matrix - 2N x 2N, N = num_inputs + num_outputs = total number of ports
         # Similar to an S matrix, where the ijth componenet is the ratio of the complex amplitude
         # between the output at the ith port and the input at the jth port
         # To account for polarization, element modified to have 2 elements: one for horizontal and one for vertical
-
-        #
         self._s_matrix = s_matrix
-
-        # list of inputs/outputs
         self._num_inputs = num_inputs
         self._input_ports = [Port(self) for _ in range(num_inputs)]
+        # maps aliases to ports
         self._input_port_aliases = {}
+        # maps ids to ports
         self._input_port_ids = {}
-
         for input_port in self._input_ports:
             self._input_port_ids[input_port.id] = input_port
 
         self._num_outputs = num_outputs
         self._output_ports = [Port(self) for _ in range(num_outputs)]
+        # maps aliases to ports
         self._output_port_aliases = {}
+        # maps ids to ports
         self._output_port_ids = {}
-
         for output_port in self._output_ports:
             self._output_port_ids[output_port.id] = output_port
 
@@ -148,12 +156,10 @@ class Component(ABC):
 
         :param input_port_name: The index or alias of the input port
         :type input_port_name: int, str
-        :param component: The other component to which this component will be attached to
-        :type component: Component
-        :param output_port_name: The index or alias of the output port
-        :type output_port_name: int, str  
+        :param to: port reference representing the output port that the input port
+            will be connected to
+        :type to: PortRef
         """
-        component, output_port_name = to
 
         input_port = self._get_input_port_from_ref(to=PortRef(self, input_port_name))
         output_port = self._get_output_port_from_ref(to=to)
@@ -168,12 +174,10 @@ class Component(ABC):
 
         :param output_port_name: The index or alias of the output port
         :type output_port_name: int, str
-        :param component: The other component to which this component will be attached to
-        :type component: Component
-        :param input_port_name: The index or alias of the input port
-        :type input_port_name: int, str  
+        :param to: port reference representing the input port that the output port
+            will be connected to
+        :type to: PortRef
         """
-        component, input_port_name = to
 
         input_port = self._get_input_port_from_ref(to=to)
         output_port = self._get_output_port_from_ref(to=PortRef(self, output_port_name))
@@ -208,6 +212,12 @@ class Component(ABC):
         output_port.connection = None
 
     def _get_input_port_from_ref(self, *, to: PortRef) -> Port:
+        """Gets the input port specified by the port reference passed in.
+        
+        :param to: the port reference that specifies the desired input port
+        :type to: PortRef
+        """
+        
         from .exceptions import MissingAliasException
 
         component, port_name = to
@@ -222,6 +232,11 @@ class Component(ABC):
         return port
 
     def _get_output_port_from_ref(self, *, to: PortRef) -> Port:
+        """Gets the output port specified by the port reference passed in.
+        
+        :param to: the port reference that specifies the desired output port
+        :type to: PortRef
+        """
         from .exceptions import MissingAliasException
 
         component, port_name = to

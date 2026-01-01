@@ -2,7 +2,6 @@ from dataclasses import dataclass, astuple
 from enum import Enum
 from typing import Iterator
 
-
 @dataclass(frozen=True, slots=True)
 class Stokes:
     """Class that stores the Stokes parameters, which are used to represent polarization states
@@ -31,7 +30,6 @@ class Stokes:
         """
         
         return iter(astuple(self))
-
 
 class StokesParameters(Enum):
     """Enumeration of the four Stokes parameters used to describe polarization.

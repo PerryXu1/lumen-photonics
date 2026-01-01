@@ -1,12 +1,12 @@
 from abc import ABC
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
-from uuid import UUID, uuid4
+from uuid import uuid4
 from typing import TYPE_CHECKING
 
+# avoids circular import errors from type hinting
 if TYPE_CHECKING:
     from ..circuit.component import Component
-
 
 class Connection(ABC):
     """Connection abstract base class that cannot be instantiated."""
@@ -50,7 +50,6 @@ def singleton(cls):
     """Injects singleton behavior into a class."""
 
     cls._instance = None
-
     orig_new = cls.__new__
 
     def __new__(inner_cls, *args, **kwargs):
