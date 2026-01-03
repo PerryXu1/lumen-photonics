@@ -1,3 +1,4 @@
+from ...models.light import CoherentLight
 from ..component import Component
 import numpy as np
 from numpy.typing import NDArray
@@ -18,5 +19,16 @@ class _CondensedComponent(Component):
     _COMPONENT_NAME = "CONDENSED_COMPONENT"
 
     def __init__(self, s_matrix: NDArray[np.complex128]):
-        super().__init__(self._COMPONENT_NAME, 1, 1, s_matrix)
+        super().__init__(self._COMPONENT_NAME, 1, 1)
         self._s_matrix = s_matrix
+    
+    def get_s_matrix(self, wavelength: float) -> NDArray[np.complex128]:
+        """Returns the modified S matrix that mathematically represents the component
+        
+        :param wavelength: Wavelength of the light going through the component
+        :type wavelength: float
+        :return: The modified S matrix
+        :rtype: NDArray[np.complex128]
+        """
+        
+        return self._s_matrix
