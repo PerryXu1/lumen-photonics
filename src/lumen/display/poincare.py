@@ -1,4 +1,4 @@
-from typing import MutableSequence, Optional, Sequence
+from typing import MutableSequence, Optional
 from matplotlib.animation import FuncAnimation
 from matplotlib.axes import Axes
 from matplotlib.collections import PathCollection
@@ -13,8 +13,6 @@ from ..models.light import Light
 class Poincare(DisplayOne, DisplayMany):
     """A display that plots the Stokes parameters on a Poincare Sphere.
     
-    :param light: The light whose Stokes parameters are displayed
-    :type light: Light
     :param settings: Optional settings that can be passed in to change the display's attributes
     :type settings: DisplaySettings (optional)
     """
