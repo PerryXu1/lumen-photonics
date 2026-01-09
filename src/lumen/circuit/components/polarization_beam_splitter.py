@@ -51,7 +51,37 @@ class PolarizationBeamSplitter(Component):
         self.insertion_loss_db = insertion_loss_db
         self.phase_t = phase_t
         self.phase_e = phase_e
-    
+        
+    def __str__(self):
+        if self.ER_db == "ideal":
+            er_val = float('inf')
+            leakage_pct = 0.0
+        else:
+            er_val = self.ER_db
+            leakage_pct = (10 ** (-er_val / 10)) * 100
+
+        transmission_pct = (10 ** (-self.insertion_loss_db / 10)) * 100
+
+        return (
+            f"--- Polarization Beam Splitter: {self.name} ---\n"
+            f"  Extinction Ratio: {self.ER_db} dB\n"
+            f"  Crosstalk Leakage: {leakage_pct:.4f}%\n"
+            f"  Insertion Loss:   {self.insertion_loss_db} dB ({transmission_pct:.1f}% thru)\n"
+            f"  Routing Mapping:\n"
+            f"    - Port 1 [H] -> Port 3 (Through)\n"
+            f"    - Port 1 [V] -> Port 4 (Cross)\n"
+            f"  Intended Phase:   {self.phase_t:.2f} rad"
+        )
+        
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}("
+            f"ER_db={self.ER_db!r}, "
+            f"insertion_loss_db={self.insertion_loss_db!r}, "
+            f"phase_t={self.phase_t!r}, "
+            f"phase_e={self.phase_e!r})"
+        )
+        
     def get_s_matrix(self, wavelength: float) -> NDArray[np.complex128]:
         """Returns the modified S matrix that mathematically represents the component
         

@@ -23,7 +23,14 @@ class DisplaySettings:
     # attributes of the figure
     width: int
     height: int
-    background_color: str 
+    background_color: str
+    
+    def __repr__(self):
+        return (f"{self.__class__.__name__}(width={self.width!r}, "
+                f"height={self.height!r}, background_color={self.background_color!r})")
+
+    def __str__(self):
+        return f"DisplaySettings: {self.width}x{self.height} [BG: {self.background_color}]"
 
     def __post_init__(self):
         """Validates the data class
@@ -55,6 +62,12 @@ class DisplayOne(ABC):
             height=self._DEFAULT_HEIGHT,
             background_color=self._DEFAULT_BACKGROUND_COLOR,
         )
+        
+    def __repr__(self):
+        return f"{self.__class__.__name__}(settings={self.settings!r})"
+
+    def __str__(self):
+        return f"<{self.__class__.__name__}> visualizer for a single Light state ({self.settings.width}x{self.settings.height})"
 
     @abstractmethod
     def display_one(self, light) -> None:
@@ -95,6 +108,12 @@ class DisplayMany(ABC):
             height=self._DEFAULT_HEIGHT,
             background_color=self._DEFAULT_BACKGROUND_COLOR,
         )
+
+    def __str__(self):
+        return f"<{self.__class__.__name__}> visualizer for multiple Light states ({self.settings.width}x{self.settings.height})"
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(settings={self.settings!r})"
 
     @abstractmethod
     def display_many(self, times: NDArray[np.float64], light_states: MutableSequence[Light]) -> None:

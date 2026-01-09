@@ -24,6 +24,9 @@ class PortRef:
     
     component: T
     port_name: str | int
+    
+    def __repr__(self):
+        return f"PortRef(comp={self.component.name!r}, port={self.port_name!r})"
 
     def __iter__(self) -> Iterator[T | str | int]:
         """
@@ -73,6 +76,22 @@ class Component(ABC):
 
         self._in_degree = 0
         self._out_degree = 0
+        
+    def __str__(self):
+        return (
+            f"{self.name} ({self.__class__.__name__}): "
+            f"{self._in_degree}/{self._num_inputs} inputs connected, "
+            f"{self._out_degree}/{self._num_outputs} outputs connected."
+        )
+        
+    def __repr__(self):
+        return (
+            f"<{self.__class__.__name__} "
+            f"name={self.name!r}, "
+            f"id={str(self.id)[:8]}..., "
+            f"in={self._num_inputs}, "
+            f"out={self._num_outputs}>"
+        )
 
     @abstractmethod
     def get_s_matrix(self, wavelength: float) -> NDArray[np.complex128]:

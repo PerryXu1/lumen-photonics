@@ -30,6 +30,9 @@ class DuplicateAliasException(Exception):
             return f"'{self.alias}' already exists as an alias"
         return self.message
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(alias={self.alias!r}, message={self.message!r})"
+    
 class MissingAliasException(Exception):
     """Exception thrown when an alias used to search for a port does not exist.
     
@@ -59,6 +62,9 @@ class MissingAliasException(Exception):
             return f"'{self.alias}' does not exist"
         return self.message
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(alias={self.alias!r}, message={self.message!r})"
+        
 class MissingPortException(Exception):
     """Exception thrown when the port referred to in a circuit does not exist.
     
@@ -87,6 +93,9 @@ class MissingPortException(Exception):
             return f"{self.port.id} not found in the circuit"
         return self.message
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(port={self.port!r}, message={self.message!r})"
+        
 class MissingComponentException(Exception):
     """Exception thrown when the component referred to in a circuit does not exist.
     
@@ -116,6 +125,9 @@ class MissingComponentException(Exception):
             return f"{self.component.id} not found in the circuit"
         return self.message
     
+    def __repr__(self):
+        return f"{self.__class__.__name__}(component={self.component!r}, message={self.message!r})"
+        
 class PassivityException(Exception):
     """Exception thrown when the a passive component in a circuit produces energy.
     
@@ -144,3 +156,6 @@ class PassivityException(Exception):
         if self.message is None:
             return f"{self.component} is non-passive."
         return self.message
+        
+    def __repr__(self):
+        return f"{self.__class__.__name__}(component={self.component!r}, message={self.message!r})"

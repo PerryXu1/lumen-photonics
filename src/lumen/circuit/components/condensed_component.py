@@ -19,6 +19,17 @@ class _CondensedComponent(Component):
     def __init__(self, s_matrix: NDArray[np.complex128]):
         super().__init__(self._COMPONENT_NAME, 1, 1)
         self._s_matrix = s_matrix
+        
+    def __str__(self):
+        rows, cols = self._s_matrix.shape
+        return (
+            f"Condensed Simulation Node ({self.name}):\n"
+            f"  - Matrix Size: {rows}x{cols}\n"
+            f"  - Status: Mathematical abstraction of sequential components"
+        )
+        
+    def __repr__(self):
+        return f"{self.__class__.__name__}(s_matrix={self._s_matrix!r})"
     
     def get_s_matrix(self, wavelength: float) -> NDArray[np.complex128]:
         """Returns the modified S matrix that mathematically represents the component

@@ -20,6 +20,12 @@ class Stokes:
     S1: float
     S2: float
     S3: float
+    
+    def __repr__(self):
+        return f"Stokes(S0={self.S0!r}, S1={self.S1!r}, S2={self.S2!r}, S3={self.S3!r})"
+
+    def __str__(self):
+        return f"S = [{self.S0:.3f}, {self.S1:.3f}, {self.S2:.3f}, {self.S3:.3f}]ᵀ"
 
     def __iter__(self) -> Iterator[float]:
         """
@@ -39,3 +45,9 @@ class StokesParameters(Enum):
     S1 = 1
     S2 = 2
     S3 = 3
+
+    def __repr__(self):
+        return f"<StokesParameters.{self.name}: {self.value}>"
+
+    def __str__(self):
+        return self.name

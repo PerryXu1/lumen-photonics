@@ -3,8 +3,8 @@ from ..component import Component
 import numpy as np
 from numpy.typing import NDArray
 
-class QWP(Component):
-    """2-port polarization retarder. Shifts phase between fast and slow axes by pi/2.
+class QuarterWavePlate(Component):
+    """2-port polarization retarder. Shifts phase between fast and slow axes by pi/2. AKA QWP
 
     ## Port Designations
     - Inputs: Port 1
@@ -17,23 +17,45 @@ class QWP(Component):
     Shifts phase between fast and slow axes by pi/2 (90 deg). Used to convert between 
     linear and circular polarization.
         
-    :param angle: The angle that the QWP is oriented relative to the horizontal state (radians)
+    :param angle: The angle that the QuarterWavePlate is oriented relative to the horizontal state (radians)
     :type angle: float | Literal["horizontal", "vertical"]
     """
     
     __slots__ = ("id", "name", "_num_inputs", "_num_outputs", "_ports", "_port_aliases",
-                 "_port_ids", "_in_degree", "_out_degree" "angle")
+                 "_port_ids", "_in_degree", "_out_degree", "angle")
     
-    _COMPONENT_NAME = "QWP"
+    _COMPONENT_NAME = "QuarterWavePlate"
 
     def __init__(self, *, angle: float | Literal["horizontal", "vertical"]):
-        if self.angle == "horizontal":
+        if angle == "horizontal":
             self.angle = 0
-        elif self.angle == "vertical":
+        elif angle == "vertical":
             self.angle = np.pi / 2
-        elif isinstance(self.angle, float):
+        elif isinstance(angle, float):
             self.angle = angle
         super().__init__(self._COMPONENT_NAME, 1, 1)
+        
+    def __str__(self):
+        angle_deg = np.degrees(self.angle)
+        function_note = ""
+        if np.isclose(angle_deg % 90, 45):
+            function_note = " (Circular Polarization Converter)"
+        elif np.isclose(angle_deg % 90, 0):
+            function_note = " (Phase Retarder only)"
+
+        return (
+            f"--- Quarter-Wave Plate (QWP): {self.name} ---\n"
+            f"  Orientation Angle: {self.angle:.4f} rad ({angle_deg:.2f}°){function_note}\n"
+            f"  Phase Retardation: π/2 (90°)\n"
+            f"  Effect:            Linear ↔ Circular Transformation\n"
+            f"  Ports:             Port 1 (In) -> Port 2 (Out)"
+        )
+        
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}("
+            f"angle={self.angle!r})"
+        )
     
     def get_s_matrix(self, wavelength: float) -> NDArray[np.complex128]:
         """Returns the modified S matrix that mathematically represents the component

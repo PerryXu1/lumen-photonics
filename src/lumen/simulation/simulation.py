@@ -20,6 +20,12 @@ class MatrixSolver(Enum):
     DENSE = 0
     SPARSE = 1
     
+    def __repr__(self):
+        return f"<MatrixSolver.{self.name}: {self.value}>"
+
+    def __str__(self):
+        return f"{self.name} Solver"
+    
 class Simulation:
     """Simulates a photonic circuit.
     
@@ -44,6 +50,26 @@ class Simulation:
     
     def __init__(self, photonic_circuit: PhotonicCircuit):
         self.photonic_circuit = photonic_circuit
+        
+    def __repr__(self):
+        return f"Simulation(photonic_circuit={self.photonic_circuit!r})"
+
+    def __str__(self):
+        # Gather circuit stats for a quick snapshot
+        num_components = len(self.photonic_circuit.components)
+        num_ports = len(self.photonic_circuit.ports)
+        
+        # Determine the recommended solver based on circuit size
+        recommended_solver = (
+            MatrixSolver.SPARSE if num_ports > self._DENSE_DOMAIN_SIZE 
+            else MatrixSolver.DENSE
+        )
+
+        return (
+            f"--- Photonic Simulation Engine ---\n"
+            f"  Circuit:          {self.photonic_circuit.name}\n"
+            f"  Scale:            {num_components} Components | {num_ports} Ports\n"
+        )
         
     def simulate(self, times: NDArray[np.float64]) -> SimulationResult:
         """Simulates a photonic circuit. The algorithm first simplifies chains of sequential

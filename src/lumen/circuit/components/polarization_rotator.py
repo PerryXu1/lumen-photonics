@@ -23,6 +23,18 @@ class PolarizationRotator(Component):
 
     def __init__(self):
         super().__init__(self._COMPONENT_NAME, 1, 1)
+        
+    def __str__(self):
+        return (
+            f"--- Polarization Rotator (90°): {self.name} ---\n"
+            f"  Type:           Fixed mode-converter\n"
+            f"  Function:       H ↔ V Swap\n"
+            f"  Ports:          Port 1 (In) -> Port 2 (Out)\n"
+            f"  Status:         Ideal/Passive"
+        )
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}()"
     
     def get_s_matrix(self, wavelength: float) -> NDArray[np.complex128]:
         """Returns the modified S matrix that mathematically represents the component

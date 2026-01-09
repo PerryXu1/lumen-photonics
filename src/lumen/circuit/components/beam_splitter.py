@@ -34,6 +34,23 @@ class BeamSplitter(Component):
 
     def __init__(self):
         super().__init__(self._COMPONENT_NAME, 2, 2)
+        
+    def __str__(self):
+        mode = "Idle"
+        if self._in_degree == 1:
+            mode = "Beam Splitter"
+        elif self._in_degree == 2:
+            mode = "Beam Combiner"
+            
+        return (
+            f"{self.name} ({self.__class__.__name__}):\n"
+            f"  - Mode: {mode}\n"
+            f"  - Connections: {self._in_degree} In, {self._out_degree} Out\n"
+            f"  - Phase Logic: -π/2 shift on cross-paths"
+        )
+        
+    def __repr__(self):
+        return f"{self.__class__.__name__}()"
     
     def get_s_matrix(self, wavelength: float) -> NDArray[np.complex128]:
         """Returns the modified S matrix that mathematically represents the component

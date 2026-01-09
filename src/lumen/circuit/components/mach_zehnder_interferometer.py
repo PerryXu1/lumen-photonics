@@ -40,7 +40,7 @@ class MachZehnderInterferometer(Component):
 
     def __init__(self, *, arm_length: float, nH: float, nH_gradient: float, central_wavelength_H: float,
                  nV: float, nV_gradient: float, central_wavelength_V: float):
-        super().__init__(self._COMPONENT_NAME, 2, 2)
+        super().__init__(self._COMPONENT_NAME, 1, 1)
         self.arm_length = arm_length
         self.nH = nH
         self.nH_gradient = nH_gradient
@@ -48,6 +48,34 @@ class MachZehnderInterferometer(Component):
         self.nV = nV
         self.nV_gradient = nV_gradient
         self.central_wavelength_V = central_wavelength_V
+        
+    def __str__(self):
+        phase_h_rad = (2 * np.pi * self.nH * self.arm_length) / self.central_wavelength_H
+        phase_v_rad = (2 * np.pi * self.nV * self.arm_length) / self.central_wavelength_V
+        
+        phase_h_norm = phase_h_rad % (2 * np.pi)
+        phase_v_norm = phase_v_rad % (2 * np.pi)
+
+        return (
+            f"--- Mach-Zehnder Interferometer (MZI): {self.name} ---\n"
+            f"  Arm Delta-Length: {self.arm_length:.4e} m\n"
+            f"  H-Index (nH):     {self.nH:.4f} (@{self.central_wavelength_H*1e9:.1f} nm)\n"
+            f"  V-Index (nV):     {self.nV:.4f} (@{self.central_wavelength_V*1e9:.1f} nm)\n"
+            f"  Central Phase:    H: {phase_h_norm:.2f} rad | V: {phase_v_norm:.2f} rad\n"
+            f"  Ports:            Port 1 (In) -> Port 2 (Out)"
+        )
+
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}("
+            f"arm_length={self.arm_length!r}, "
+            f"nH={self.nH!r}, "
+            f"nH_gradient={self.nH_gradient!r}, "
+            f"central_wavelength_H={self.central_wavelength_H!r}, "
+            f"nV={self.nV!r}, "
+            f"nV_gradient={self.nV_gradient!r}, "
+            f"central_wavelength_V={self.central_wavelength_V!r})"
+        )
     
     def get_s_matrix(self, wavelength: float) -> NDArray[np.complex128]:
         """Returns the modified S matrix that mathematically represents the component

@@ -23,6 +23,26 @@ class PhotonicCircuit:
         self.circuit_inputs: MutableMapping[Port, Laser] = {}
         # the ports at which the final state is desired
         self.circuit_outputs: MutableSequence[Port] = []
+        
+    def __str__(self):
+        comp_list = ", ".join([c.name for c in self._components]) if self._components else "Empty"
+        return (
+            f"Photonic Circuit\n"
+            f"------------------------\n"
+            f"ID: {self.id}\n"
+            f"Components [{len(self._components)}]: {comp_list}\n"
+            f"Circuit Inputs: {len(self.circuit_inputs)}\n"
+            f"Circuit Outputs: {len(self.circuit_outputs)}"
+        )
+        
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}("
+            f"id={str(self.id)[:8]}..., "
+            f"components={len(self._components)}, "
+            f"inputs={len(self.circuit_inputs)}, "
+            f"outputs={len(self.circuit_outputs)})"
+        )
 
     def set_circuit_input(self, laser: Laser, port_ref: PortRef) -> None:
         """Sets a port that laser light source inputs to.

@@ -2,7 +2,6 @@ from collections import defaultdict
 from typing import Literal, MutableSequence
 import numpy as np
 from numpy.typing import NDArray
-
 from ..models.model_exceptions import InvalidLightTypeException
 from ..simulation.simulation import Coherence
 from ..models.port import Port
@@ -21,6 +20,27 @@ class SimulationResult:
     def __init__(self, coherence: Coherence):
         self._port_to_output_lights = defaultdict(list)
         self.coherence = coherence
+        
+    def __str__(self) -> str:
+        port_count = len(self._port_to_output_lights)
+        
+        port_summary = []
+        for port, lights in self._port_to_output_lights.items():
+            if lights:
+                avg_p = np.mean([l.intensity if hasattr(l, 'intensity') else l.intensity() for l in lights])
+                port_summary.append(f"    - {port.component.name} (Port {port.id.hex[:4]}): {len(lights)} states, Avg Power: {avg_p:.2e}")
+
+        summary_text = "\n".join(port_summary) if port_summary else "    (No output data recorded)"
+
+        return (
+            f"--- Simulation Results [{self.coherence.name}] ---\n"
+            f"  Total Active Ports: {port_count}\n"
+            f"  Port Data Breakdown:\n{summary_text}"
+        )
+
+    def __repr__(self) -> str:
+        return (f"SimulationResult(coherence={self.coherence!r}, "
+                f"recorded_ports={list(self._port_to_output_lights.keys())!r})")
     
     def __getitem__(self, port_ref: PortRef) -> MutableSequence[Light]:
         """Returns list of lights corresponding to a port reference. Makes class itself callable
@@ -136,8 +156,8 @@ class SimulationResult:
         if self.coherence == Coherence.COHERENT:
             eh, ev = self._get_arrays(port_ref)
             if mode == "horizontal":
-                return np.angle(ev)
-            return np.angle(eh)
+                return np.angle(eh)
+            return np.angle(ev)
         else:
             raise InvalidLightTypeException(self.coherence)
             

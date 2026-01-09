@@ -49,6 +49,35 @@ class PhaseShifter(Component):
         self.length = length
         self.power_ratio_H = power_ratio_H
         self.power_ratio_V = power_ratio_V
+        
+    def __str__(self):
+        phi_h = (2 * np.pi * self.nH * self.length) / self.central_wavelength_H
+        phi_v = (2 * np.pi * self.nV * self.length) / self.central_wavelength_V
+        delta_n = self.nH - self.nV
+        
+        return (
+            f"--- Phase Shifter / Waveguide: {self.name} ---\n"
+            f"  Length:         {self.length:.4e} m\n"
+            f"  H-Phase Delay:  {phi_h:.2f} rad (mod 2π: {phi_h % (2*np.pi):.2f})\n"
+            f"  V-Phase Delay:  {phi_v:.2f} rad (mod 2π: {phi_v % (2*np.pi):.2f})\n"
+            f"  Birefringence:  Δn = {delta_n:.4e}\n"
+            f"  H/V Loss:       {self.power_ratio_H:.2f} / {self.power_ratio_V:.2f} dB/m\n"
+            f"  Ports:          Port 1 -> Port 2"
+        )
+        
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}("
+            f"nH={self.nH!r}, "
+            f"nH_gradient={self.nH_gradient!r}, "
+            f"central_wavelength_H={self.central_wavelength_H!r}, "
+            f"nV={self.nV!r}, "
+            f"nV_gradient={self.nV_gradient!r}, "
+            f"central_wavelength_V={self.central_wavelength_V!r}, "
+            f"length={self.length!r}, "
+            f"power_ratio_H={self.power_ratio_H!r}, "
+            f"power_ratio_V={self.power_ratio_V!r})"
+        )
     
     def get_s_matrix(self, wavelength: float) -> NDArray[np.complex128]:
         """Returns the modified S matrix that mathematically represents the component

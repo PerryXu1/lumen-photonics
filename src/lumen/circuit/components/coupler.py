@@ -1,4 +1,3 @@
-from ...circuit.circuit_exceptions import PassivityException
 from ..component import Component
 import numpy as np
 from numpy.typing import NDArray
@@ -39,7 +38,7 @@ class Coupler(Component):
                  "central_wavelength_V", "central_coupling_strength_H", "central_coupling_strength_V",
                  "coupling_gradient_H", "coupling_gradient_V", "length", "insertion_loss_db")
     
-    _COMPONENT_NAME = "PS"
+    _COMPONENT_NAME = "DC"
     _EPSILON = 1e-5
 
     def __init__(self, *, central_wavelength_H: float, central_wavelength_V: float,
@@ -55,7 +54,37 @@ class Coupler(Component):
         self.coupling_gradient_V = coupling_gradient_V
         self.length = length
         self.insertion_loss_db = insertion_loss_db
-    
+        
+    def __str__(self):
+        alpha = 10 ** (-self.insertion_loss_db / 20)
+        
+        thru_h = (alpha * np.cos(self.central_coupling_strength_H * self.length))**2 * 100
+        cross_h = (alpha * np.sin(self.central_coupling_strength_H * self.length))**2 * 100
+        
+        thru_v = (alpha * np.cos(self.central_coupling_strength_V * self.length))**2 * 100
+        cross_v = (alpha * np.sin(self.central_coupling_strength_V * self.length))**2 * 100
+
+        return (
+            f"--- Coupler: {self.name} ({self.length}m) ---\n"
+            f"  H-Split (T/C): {thru_h:.1f}% / {cross_h:.1f}%\n"
+            f"  V-Split (T/C): {thru_v:.1f}% / {cross_v:.1f}%\n"
+            f"  H-Gradient:    {self.coupling_gradient_H:.2e}\n"
+            f"  V-Gradient:    {self.coupling_gradient_V:.2e}\n"
+            f"  Loss:          {self.insertion_loss_db} dB"
+        )
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}("
+            f"central_wavelength_H={self.central_wavelength_H!r}, "
+            f"central_wavelength_V={self.central_wavelength_V!r}, "
+            f"central_coupling_strength_H={self.central_coupling_strength_H!r}, "
+            f"central_coupling_strength_V={self.central_coupling_strength_V!r}, "
+            f"coupling_gradient_H={self.coupling_gradient_H!r}, "
+            f"coupling_gradient_V={self.coupling_gradient_V!r}, "
+            f"length={self.length!r}, "
+            f"insertion_loss_db={self.insertion_loss_db!r})"
+        )    
+        
     def get_s_matrix(self, wavelength: float) -> NDArray[np.complex128]:
         """Returns the modified S matrix that mathematically represents the component
         

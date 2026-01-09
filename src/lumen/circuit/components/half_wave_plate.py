@@ -1,10 +1,9 @@
-from typing import Literal
 from ..component import Component
 import numpy as np
 from numpy.typing import NDArray
 
-class HWP(Component):
-    """2-port polarization retarder. Shifts phase between fast and slow axes by pi.
+class HalfWavePlate(Component):
+    """2-port polarization retarder. Shifts phase between fast and slow axes by pi. AKA HWP
 
     ## Port Designations
     - Inputs: Port 1
@@ -17,7 +16,7 @@ class HWP(Component):
     Shifts phase between fast and slow axes by pi (180 deg). Used to rotate linear polarization.
 
         
-    :param angle: The angle that the QWP is oriented relative to the horizontal state (radians)
+    :param angle: The angle that the HWP is oriented relative to the horizontal state (radians)
     :type angle: float
     """
     
@@ -27,8 +26,23 @@ class HWP(Component):
     _COMPONENT_NAME = "QWP"
 
     def __init__(self, *, angle: float):
-        self.angle = angle
         super().__init__(self._COMPONENT_NAME, 1, 1)
+        self.angle = angle
+        
+    def __str__(self):
+        angle_deg = np.degrees(self.angle)
+        effective_rot = (2 * angle_deg) % 360
+        
+        return (
+            f"--- Half-Wave Plate (HWP): {self.name} ---\n"
+            f"  Orientation Angle: {self.angle:.4f} rad ({angle_deg:.2f}°)\n"
+            f"  Effective Rotation: {effective_rot:.2f}° (for linear polarization)\n"
+            f"  Phase Retardation: π (180°)\n"
+            f"  Ports: Port 1 (In) -> Port 2 (Out)"
+        )
+        
+    def __repr__(self):
+        return f"{self.__class__.__name__}(angle={self.angle!r})"
     
     def get_s_matrix(self, wavelength: float) -> NDArray[np.complex128]:
         """Returns the modified S matrix that mathematically represents the component
