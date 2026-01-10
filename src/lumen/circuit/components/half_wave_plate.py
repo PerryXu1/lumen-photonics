@@ -33,7 +33,7 @@ class HalfWavePlate(Component):
         effective_rot = (2 * angle_deg) % 360
         
         return (
-            f"--- Half-Wave Plate (HWP): {self.name} ---\n"
+            f"--- Half-Wave Plate (HWP): {self._name} ---\n"
             f"  Orientation Angle: {self._angle:.4f} rad ({angle_deg:.2f}°)\n"
             f"  Effective Rotation: {effective_rot:.2f}° (for linear polarization)\n"
             f"  Phase Retardation: π (180°)\n"

@@ -35,8 +35,8 @@ class MachZehnderInterferometer(Component):
     """
     
     __slots__ = ("id", "name", "_num_inputs", "_num_outputs", "_ports", "_port_aliases",
-                 "_port_ids", "_in_degree", "_out_degree", "_arm_length", "central_wavelength_H",
-                 "central_wavelength_V", "_nH", "_nV", "_nH_gradient", "_nV_gradient")
+                 "_port_ids", "_in_degree", "_out_degree", "_arm_length", "_central_wavelength_H",
+                 "_central_wavelength_V", "_nH", "_nV", "_nH_gradient", "_nV_gradient")
     
     def __init__(self, *, name: str, arm_length: float, nH: float, nV: float, nH_gradient: float,
                  nV_gradient: float, central_wavelength_H: float, central_wavelength_V: float):
@@ -57,7 +57,7 @@ class MachZehnderInterferometer(Component):
         phase_v_norm = phase_v_rad % (2 * np.pi)
 
         return (
-            f"--- Mach-Zehnder Interferometer (MZI): {self.name} ---\n"
+            f"--- Mach-Zehnder Interferometer (MZI): {self._name} ---\n"
             f"  Arm Delta-Length: {self._arm_length:.4e} m\n"
             f"  H-Index (nH):     {self._nH:.4f} (@{self._central_wavelength_H*1e9:.1f} nm)\n"
             f"  V-Index (nV):     {self._nV:.4f} (@{self._central_wavelength_V*1e9:.1f} nm)\n"

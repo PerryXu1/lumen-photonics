@@ -33,7 +33,7 @@ class SimulationResult:
         for port, lights in self._port_to_output_lights.items():
             if lights:
                 avg_p = np.mean([l.intensity if hasattr(l, 'intensity') else l.intensity() for l in lights])
-                port_summary.append(f"    - {port.component.name} (Port {port.id.hex[:4]}): {len(lights)} states, Avg Power: {avg_p:.2e}")
+                port_summary.append(f"    - {port.component._name} (Port {port._id.hex[:4]}): {len(lights)} states, Avg Power: {avg_p:.2e}")
 
         summary_text = "\n".join(port_summary) if port_summary else "    (No output data recorded)"
 

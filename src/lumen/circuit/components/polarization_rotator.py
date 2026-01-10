@@ -28,7 +28,7 @@ class PolarizationRotator(Component):
         
     def __str__(self):
         return (
-            f"--- Polarization Rotator (90°): {self.name} ---\n"
+            f"--- Polarization Rotator (90°): {self._name} ---\n"
             f"  Type:           Fixed mode-converter\n"
             f"  Function:       H ↔ V Swap\n"
             f"  Ports:          Port 1 (In) -> Port 2 (Out)\n"

@@ -66,7 +66,7 @@ class Coupler(Component):
         cross_v = (alpha * np.sin(self._central_coupling_strength_V * self._length))**2 * 100
 
         return (
-            f"--- Coupler: {self.name} ({self._length}m) ---\n"
+            f"--- Coupler: {self._name} ({self._length}m) ---\n"
             f"  H-Split (T/C): {thru_h:.1f}% / {cross_h:.1f}%\n"
             f"  V-Split (T/C): {thru_v:.1f}% / {cross_v:.1f}%\n"
             f"  H-Gradient:    {self._coupling_gradient_H:.2e}\n"

@@ -194,12 +194,12 @@ class IncoherentLight(Light):
     :type coherent_lights: Sequence[CoherentLight]
     """
     
-    __slots__ = "coherent_lights",
+    __slots__ = "_coherent_lights",
     
     c = 299792458
 
     def __init__(self, coherent_lights: Sequence[CoherentLight]):
-        self.coherent_lights = coherent_lights
+        self._coherent_lights = coherent_lights
 
     def __str__(self):
         s = self.stokes_vector()
@@ -299,6 +299,10 @@ class IncoherentLight(Light):
             S2=self.stokes_parameter(StokesParameters.S2),
             S3=self.stokes_parameter(StokesParameters.S3)
         )
+
+    @property
+    def coherent_lights(self):
+        return self._coherent_lights
 
     @property
     def intensity(self) -> float:

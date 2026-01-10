@@ -42,7 +42,7 @@ class PolarizationBeamSplitter(Component):
     """
     
     __slots__ = ("id", "name", "_num_inputs", "_num_outputs", "_ports", "_port_aliases",
-                 "_port_ids", "_in_degree", "_out_degree", "ER_db", "insertion_loss_db",
+                 "_port_ids", "_in_degree", "_out_degree", "_ER_db", "_insertion_loss_db",
                  "_phase_t", "_phase_e")
     
 
@@ -64,7 +64,7 @@ class PolarizationBeamSplitter(Component):
         transmission_pct = (10 ** (-self._insertion_loss_db / 10)) * 100
 
         return (
-            f"--- Polarization Beam Splitter: {self.name} ---\n"
+            f"--- Polarization Beam Splitter: {self._name} ---\n"
             f"  Extinction Ratio: {self._ER_db} dB\n"
             f"  Crosstalk Leakage: {leakage_pct:.4f}%\n"
             f"  Insertion Loss:   {self._insertion_loss_db} dB ({transmission_pct:.1f}% thru)\n"

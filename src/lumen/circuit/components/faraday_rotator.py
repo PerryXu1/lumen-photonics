@@ -24,7 +24,7 @@ class FaradayRotator(Component):
     """
     
     __slots__ = ("id", "name", "_num_inputs", "_num_outputs", "_ports", "_port_aliases",
-                 "_port_ids", "_in_degree", "_out_degree", "angle")
+                 "_port_ids", "_in_degree", "_out_degree", "_angle")
     
 
     def __init__(self, *, name: str, angle: float):
@@ -35,7 +35,7 @@ class FaradayRotator(Component):
         angle_deg = np.degrees(self._angle)
         
         return (
-            f"--- Faraday Rotator: {self.name} ---\n"
+            f"--- Faraday Rotator: {self._name} ---\n"
             f"  Rotation Angle: {self._angle:.4f} rad ({angle_deg:.2f}°)\n"
             f"  Non-reciprocal: Yes\n"
             f"  Ports: Port 1 (In) -> Port 2 (Out)"
@@ -45,7 +45,7 @@ class FaradayRotator(Component):
         return f"{self.__class__.__name__}(angle={self._angle!r})"
     
     @property
-    def _angle(self):
+    def angle(self):
         return self._angle
     
     def get_s_matrix(self, wavelength: float) -> NDArray[np.complex128]:

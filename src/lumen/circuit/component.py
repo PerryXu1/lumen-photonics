@@ -32,9 +32,6 @@ class PortRef:
 
         return iter((self.component_name, self.port_name))
     
-    
-
-
 class Component(ABC):
     """Class representing an abstract representation of a component within the photonics circuit.
 
@@ -51,8 +48,8 @@ class Component(ABC):
     :type s_matrix: np.ndarray[np.complex128]
     """
 
-    __slots__ = ("_id", "_name", "_photonic_circuit", "_num_inputs", "_num_outputs", "_ports", "_port_aliases",
-                 "_port_ids", "_in_degree", "_out_degree")
+    __slots__ = ("_id", "_name", "_photonic_circuit", "_num_inputs", "_num_outputs",
+                 "_ports", "_port_aliases", "_port_ids", "_in_degree", "_out_degree")
 
     def __init__(self, name: str, num_inputs: int, num_outputs: int):
         self._id = uuid4()
@@ -70,7 +67,7 @@ class Component(ABC):
         # maps ids to ports
         self._port_ids = {}
         for port in self._ports:
-            self._port_ids[port.id] = port
+            self._port_ids[port._id] = port
 
         self._in_degree = 0
         self._out_degree = 0
@@ -174,9 +171,9 @@ class Component(ABC):
         port2 = self._get_port_from_ref(port_ref=to)
 
         if port1._connection is None:
-            if port1.port_type == PortType.INPUT:
+            if port1._port_type == PortType.INPUT:
                 self._in_degree += 1
-            elif port2.port_type == PortType.OUTPUT:
+            elif port2._port_type == PortType.OUTPUT:
                 self._out_degree += 1
 
         port1._connection = PortConnection(port2)
@@ -190,17 +187,17 @@ class Component(ABC):
         port = self._get_port_from_ref(port_ref=PortRef(self._name, port_name))
 
         if port._connection is not None:
-            if port.port_type == PortType.INPUT:
+            if port._port_type == PortType.INPUT:
                 self._in_degree -= 1
-            elif port.port_type == PortType.OUTPUT:
+            elif port._port_type == PortType.OUTPUT:
                 self._out_degree -= 1
         port._connection = None
         
     def _disconnect_by_port(self, port: Port) -> None:
         if port._connection is not None:
-            if port.port_type == PortType.INPUT:
+            if port._port_type == PortType.INPUT:
                 self._in_degree -= 1
-            elif port.port_type == PortType.OUTPUT:
+            elif port._port_type == PortType.OUTPUT:
                 self._out_degree -= 1
         port._connection = None
 

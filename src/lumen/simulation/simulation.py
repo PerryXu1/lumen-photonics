@@ -118,13 +118,13 @@ class Simulation:
                 if port._port_type == PortType.OUTPUT:
                     connection = port.connection
                     if isinstance(connection, PortConnection):
-                        component = connection.port.component
+                        component = connection.port._component
                         sequential_path = self._find_sequential_chain(component, anchor_components)
                         if len(sequential_path) >= 2:
                             sequential_paths.append(sequential_path)
         # iterate through starting at circuit inputs              
         for circuit_input in photonic_circuit._circuit_inputs:
-            sequential_path = self._find_sequential_chain(circuit_input.component, anchor_components)
+            sequential_path = self._find_sequential_chain(circuit_input._component, anchor_components)
             if len(sequential_path) >= 2:
                 sequential_paths.append(sequential_path)
                 
@@ -396,7 +396,7 @@ class Simulation:
             # if sequential, there will only be one output port: _ports[1]
             current_connection = current_component._ports[1]._connection
             if isinstance(current_connection, PortConnection):
-                current_component = current_connection.port.component
+                current_component = current_connection.port._component
             else: # no connection (None) or circuit output (OutputConnection)
                 return sequential_components
         return sequential_components
@@ -597,7 +597,7 @@ class Simulation:
         cols = []
         for component in photonic_circuit.components:
             for port in component._ports:
-                if port.port_type == PortType.OUTPUT:
+                if port._port_type == PortType.OUTPUT:
                     if isinstance(port._connection, PortConnection):
                         port_index_1 = port_to_index[port]
                         port_index_2 = port_to_index[port._connection.port]

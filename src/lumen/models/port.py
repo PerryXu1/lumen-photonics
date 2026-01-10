@@ -125,10 +125,10 @@ class PortConnection(Connection):
     port: Port
     
     def __str__(self):
-        return f"Connected to {self.port.component._name} (ID: {str(self.port.id)[:8]}...)"
+        return f"Connected to {self.port._component._name} (ID: {str(self.port._id)[:8]}...)"
 
     def __repr__(self):
-        return f"PortConnection(port_id={self.port.id})"
+        return f"PortConnection(port_id={self.port._id})"
 
 
 @singleton

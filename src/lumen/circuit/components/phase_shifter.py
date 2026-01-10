@@ -57,7 +57,7 @@ class PhaseShifter(Component):
         delta_n = self._nH - self._nV
         
         return (
-            f"--- Phase Shifter / Waveguide: {self.name} ---\n"
+            f"--- Phase Shifter / Waveguide: {self._name} ---\n"
             f"  Length:         {self._length:.4e} m\n"
             f"  H-Phase Delay:  {phi_h:.2f} rad (mod 2π: {phi_h % (2*np.pi):.2f})\n"
             f"  V-Phase Delay:  {phi_v:.2f} rad (mod 2π: {phi_v % (2*np.pi):.2f})\n"

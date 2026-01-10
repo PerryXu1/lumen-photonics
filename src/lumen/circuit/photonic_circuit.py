@@ -1,11 +1,11 @@
-from collections.abc import MutableMapping, MutableSequence, Sequence
-from typing import Optional
+from collections.abc import MutableMapping, MutableSequence
 from ..circuit.laser import Laser
-from ..models.port import InputConnection, OutputConnection, Port, PortConnection
+from ..models.port import InputConnection, OutputConnection, Port, PortConnection, PortType
 from .component import Component, PortRef
 from .circuit_exceptions import ConflictingConnectionException, DuplicateComponentException, DuplicateComponentNameException, MissingComponentException, SelfConnectionException
 from uuid import UUID, uuid4
-
+import graphviz
+from typing import Dict
 
 class PhotonicCircuit:
     """Class representing a photonic circuit composed of components connected to one another. 
@@ -14,6 +14,11 @@ class PhotonicCircuit:
     """
 
     __slots__ = "_id", "_components", "_names_to_components", "_circuit_inputs", "_circuit_outputs"
+
+    _DEFAULT_BACKGROUND_COLOR = "#E6E6E6"
+    _DEFAULT_COMPONENT_COLOR = "#717171"
+    _INPUT_COLOR = "#FF474C"
+    _OUTPUT_COLOR = "#90EE90"
 
     def __init__(self):
         self._id = uuid4()
@@ -80,7 +85,7 @@ class PhotonicCircuit:
         self._circuit_inputs[port] = laser
 
         if port._connection is None:
-            port.component._in_degree += 1
+            port._component._in_degree += 1
         port._connection = InputConnection()
 
     def set_circuit_output(self, *, port_ref: PortRef) -> None:
@@ -98,7 +103,7 @@ class PhotonicCircuit:
             raise ConflictingConnectionException(self, port_ref, "input")
 
         if port._connection is None:
-            port.component._out_degree += 1
+            port._component._out_degree += 1
         port._connection = OutputConnection()
 
     def add(self, component: Component) -> None:
@@ -217,3 +222,127 @@ class PhotonicCircuit:
             else:
                 raise MissingAliasException(port_name)
         return port
+    
+    def display_circuit(self, view: bool = True, filename: str = "circuit_layout") -> graphviz.Digraph:
+        """Generates and opens a PDF of the circuit schematic.
+        
+        :param view: Whether the PDF will be opened by default
+        :type view: bool
+        :param filename: The name of the file the PDF is saved to
+        :type filename: str
+        :return: The graph that is rendered
+        :rtype: graphviz.Digraph
+        """
+        
+        try:
+            dot = self._generate_circuit_diagram()
+            dot.render(filename, format="pdf", view=view)
+            return dot
+        
+        # if graphviz not installed
+        except graphviz.backend.ExecutableNotFound:
+            raise RuntimeError(
+                "\n" + "="*60 +
+                "\nGRAPHVIZ NOT FOUND: Visualization Failed."
+                "\nTo use the drawing feature, you must install the Graphviz binaries:"
+                "\n  - macOS: brew install graphviz"
+                "\n  - Linux: sudo apt-get install graphviz"
+                "\n  - Windows: Download from https://graphviz.org/download/"
+                "\nThen, ensure 'dot' is in your system PATH."
+                "\n" + "="*60
+            ) from None
+            
+
+    def _generate_circuit_diagram(self) -> graphviz.Digraph:
+        """Creates the diagram to be rendered by graphviz.
+        
+        :return: The directed graph to be rendered
+        :rtype: graphviz.Digraph
+        """
+        dot = graphviz.Digraph("Photonic Circuit", engine='dot')
+        
+        # global attributes
+        dot.attr(rankdir='LR', nodesep='2.0', ranksep='2.5')
+        dot.attr('node', fontname='Arial', fontsize='10')
+        
+        #set of all traversed edges to check for feedback
+        visited_components = set()
+
+        # add components
+        for component in self._components:
+            component_name = component._name
+            in_ports = [port for port in component.ports if port._port_type == PortType.INPUT]
+            out_ports = [port for port in component.ports if port._port_type == PortType.OUTPUT]
+            
+            # build label for graphviz record object
+            in_label = "|".join([f"<{port._id.hex[:4]}> {port._alias or port_index+1}" for port_index, port in enumerate(in_ports)])
+            out_label = "|".join([f"<{port._id.hex[:4]}> {port._alias or port_index+len(in_ports)+1}" for port_index, port in enumerate(out_ports)])
+            
+            full_label = f"{{ {{{in_label}}} | {component_name}\\n({type(component).__name__}) | {{{out_label}}} }}"
+                        
+            dot.node(component_name, label=full_label, shape='record', style='filled',
+                     fillcolor=self._DEFAULT_COMPONENT_COLOR)
+
+        # define connections
+        for component in self._components:
+            visited_components.add(component)
+            num_inputs = component._num_inputs
+            num_outputs = component._num_outputs
+            for port_index, port in enumerate(component._ports):
+                if isinstance(port.connection, PortConnection):
+                    if port._port_type == PortType.OUTPUT:
+                        other_port = port.connection.port
+                        other_component = other_port._component
+                        
+                        if other_component in visited_components:
+                            # find side of feedback arrow for source
+                            if num_inputs == 1 or num_outputs == 1:
+                                src_side = ""
+                            elif port_index == 0 or port_index == num_inputs:
+                                src_side = ":n"
+                            elif port_index == num_inputs - 1 or port_index == num_inputs + num_outputs - 1:
+                                src_side = ":s"
+                            else:
+                                src_side = ""
+                            
+                            other_num_inputs = other_component._num_inputs
+                            other_num_outputs = other_component._num_outputs
+                            other_port_index = other_port.component._ports.index(other_port)
+                            
+                            # find side of feedback arrow for destination
+                            if other_num_inputs == 1 or other_num_outputs == 1:
+                                dst_side = ""
+                            if other_port_index == 0 or other_port_index == other_num_inputs:
+                                dst_side = ":n"
+                            elif other_port_index == other_num_inputs - 1 or other_port_index == other_num_inputs + other_num_outputs - 1:
+                                dst_side = ":s"
+                            else:
+                                dst_side = ""
+                                
+                            # if one is defined and the other is not, the defined one overrides the undefined one to ensure arrows don't cross over
+                            if src_side == "" and dst_side != "":
+                                src_side = dst_side
+                            elif src_side != "" and dst_side == "":
+                                dst_side = src_side
+                            src = f"{port._component._name}:{port._id.hex[:4]}{src_side}"
+                            dst = f"{port.connection.port._component._name}:{port.connection.port._id.hex[:4]}{dst_side}"
+                            dot.edge(src, dst, penwidth="0.8")
+                        else:
+                            src = f"{port._component._name}:{port._id.hex[:4]}:e"
+                            dst = f"{port.connection.port._component._name}:{port.connection.port._id.hex[:4]}:w"
+                            dot.edge(src, dst, penwidth="2.5")
+                                
+                            
+                    
+                # If connected to the outside world
+                elif "InputConnection" in str(type(port.connection)):
+                    ext_name = f"SRC_{port._id.hex[:4]}"
+                    dot.node(ext_name, "Laser", shape='cds', fillcolor=self._INPUT_COLOR, style='filled')
+                    dot.edge(ext_name, f"{port._component._name}:{port._id.hex[:4]}", penwidth="2.5")
+                    
+                elif "OutputConnection" in str(type(port.connection)):
+                    ext_name = f"SINK_{port._id.hex[:4]}"
+                    dot.node(ext_name, "Detector", shape='doublecircle', fillcolor=self._OUTPUT_COLOR, style='filled', margin="0")
+                    dot.edge(f"{port._component._name}:{port._id.hex[:4]}", ext_name, penwidth="2.5")
+
+        return dot

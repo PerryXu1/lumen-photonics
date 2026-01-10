@@ -44,7 +44,7 @@ class BeamSplitter(Component):
             mode = "Beam Combiner"
             
         return (
-            f"{self.name} ({self.__class__.__name__}):\n"
+            f"{self._name} ({self.__class__.__name__}):\n"
             f"  - Mode: {mode}\n"
             f"  - Connections: {self._in_degree} In, {self._out_degree} Out\n"
             f"  - Phase Logic: -π/2 shift on cross-paths"

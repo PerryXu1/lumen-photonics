@@ -23,7 +23,7 @@ class _CondensedComponent(Component):
     def __str__(self):
         rows, cols = self._s_matrix.shape
         return (
-            f"Condensed Simulation Node ({self.name}):\n"
+            f"Condensed Simulation Node ({self._name}):\n"
             f"  - Matrix Size: {rows}x{cols}\n"
             f"  - Status: Mathematical abstraction of sequential components"
         )

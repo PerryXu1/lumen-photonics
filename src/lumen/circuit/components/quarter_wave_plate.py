@@ -24,19 +24,19 @@ class QuarterWavePlate(Component):
     """
     
     __slots__ = ("id", "name", "_num_inputs", "_num_outputs", "_ports", "_port_aliases",
-                 "_port_ids", "_in_degree", "_out_degree", "angle")
+                 "_port_ids", "_in_degree", "_out_degree", "_angle")
     
     def __init__(self, *, name: str, angle: float | Literal["horizontal", "vertical"]):
         if angle == "horizontal":
-            self.angle = 0
+            self._angle = 0
         elif angle == "vertical":
-            self.angle = np.pi / 2
+            self._angle = np.pi / 2
         elif isinstance(angle, float):
-            self.angle = angle
+            self._angle = angle
         super().__init__(name, 1, 1)
         
     def __str__(self):
-        angle_deg = np.degrees(self.angle)
+        angle_deg = np.degrees(self._angle)
         function_note = ""
         if np.isclose(angle_deg % 90, 45):
             function_note = " (Circular Polarization Converter)"
@@ -44,8 +44,8 @@ class QuarterWavePlate(Component):
             function_note = " (Phase Retarder only)"
 
         return (
-            f"--- Quarter-Wave Plate (QWP): {self.name} ---\n"
-            f"  Orientation Angle: {self.angle:.4f} rad ({angle_deg:.2f}°){function_note}\n"
+            f"--- Quarter-Wave Plate (QWP): {self._name} ---\n"
+            f"  Orientation Angle: {self._angle:.4f} rad ({angle_deg:.2f}°){function_note}\n"
             f"  Phase Retardation: π/2 (90°)\n"
             f"  Effect:            Linear ↔ Circular Transformation\n"
             f"  Ports:             Port 1 (In) -> Port 2 (Out)"
@@ -54,7 +54,7 @@ class QuarterWavePlate(Component):
     def __repr__(self):
         return (
             f"{self.__class__.__name__}("
-            f"angle={self.angle!r})"
+            f"angle={self._angle!r})"
         )
         
     @property
@@ -70,9 +70,9 @@ class QuarterWavePlate(Component):
         :rtype: NDArray[np.complex128]
         """
         
-        J11 = np.cos(self.angle) ** 2 + 1j * np.sin(self.angle) ** 2
-        J_off_diagonal = (1 - 1j) * np.sin(self.angle) * np.cos(self.angle)
-        J22 = np.sin(self.angle) ** 2 + 1j * np.cos(self.angle) ** 2
+        J11 = np.cos(self._angle) ** 2 + 1j * np.sin(self._angle) ** 2
+        J_off_diagonal = (1 - 1j) * np.sin(self._angle) * np.cos(self._angle)
+        J22 = np.sin(self._angle) ** 2 + 1j * np.cos(self._angle) ** 2
         
         return np.exp(-1j * np.pi / 4) * np.array([
             [0, 0, J11, J_off_diagonal],
