@@ -3,9 +3,7 @@ from ..circuit.laser import Laser
 from ..models.port import InputConnection, OutputConnection, Port, PortConnection, PortType
 from .component import Component, PortRef
 from .circuit_exceptions import ConflictingConnectionException, DuplicateComponentException, DuplicateComponentNameException, MissingComponentException, SelfConnectionException
-from uuid import UUID, uuid4
-import graphviz
-from typing import Dict
+from uuid import UUID, uuid4 
 
 class PhotonicCircuit:
     """Class representing a photonic circuit composed of components connected to one another. 
