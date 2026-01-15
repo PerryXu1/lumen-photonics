@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 from typing import Optional
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
@@ -36,6 +35,19 @@ class PolarizationView3D(DisplayOne):
 
     def __init__(self, *, settings: Optional[DisplaySettings] = None):
         super().__init__(settings)
+        
+    def __str__(self):
+        return (
+            f"--- {self.__class__.__name__} ---\n"
+            f"  Spatial Window:  {self._WAVELENGTHS} wavelengths over {self._Z_LIMIT}m\n"
+            f"  Wave Number (k): {self._K:.2f} rad/m\n"
+            f"  Frequency (ω):   {self._OMEGA:.2f} rad/s\n"
+            f"  Components:      H-field (Blue), V-field (Red), Total (Black)\n"
+            f"  Resolution:      Δz = {self._DZ}m"
+        )
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(settings={self.settings!r})"
 
     def display_one(self, light: Light, *, FPS:int = DEFAULT_FPS,
                 total_time: float = DEFAULT_TOTAL_TIME) -> None:

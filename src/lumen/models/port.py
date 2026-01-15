@@ -16,8 +16,20 @@ class PortType(Enum):
     INPUT = 0
     OUTPUT = 1
 
+    def __str__(self):
+        return self.name
+    
+    def __repr__(self):
+        return f"<PortType.{self.name}: {self.value}>"
+
 class Connection(ABC):
     """Connection abstract base class that cannot be instantiated."""
+    
+    def __str__(self):
+        return f"{self.__class__.__name__}"
+    
+    def __repr__(self):
+        return f"<{self.__class__.__name__}>"
 
     def __new__(cls, *args, **kwargs):
         """Prevents the class from being instantiated directly
@@ -44,12 +56,26 @@ class Port:
         self._id = uuid4()
         self._component = component
         self._port_type = port_type
-        self.connection = connection
-        self.alias = alias
+        self._connection = connection
+        self._alias = alias
+
+    def __str__(self):
+        if self._connection is None:
+            conn_status = "Disconnected"
+        else:
+            conn_status = str(self._connection)
+            
+        alias_str = f" '{self._alias}'" if self._alias else ""
         
-    @property
-    def port_type(self):
-        return self._port_type
+        return (
+            f"Port{alias_str} [{self._port_type.name}]\n"
+            f"  Component: {self._component._name}\n"
+            f"  Status:    {conn_status}"
+        )
+        
+    def __repr__(self):
+        return (f"Port(type={self._port_type.name}, alias={self._alias!r}, "
+                f"component={self._component._name}, id={str(self._id)[:8]})")
     
     @property
     def id(self):
@@ -59,6 +85,17 @@ class Port:
     def component(self):
         return self._component
 
+    @property
+    def port_type(self):
+        return self._port_type
+    
+    @property
+    def connection(self):
+        return self._connection
+    
+    @property
+    def alias(self):
+        return self._alias
 
 def singleton(cls):
     """Injects singleton behavior into a class."""
@@ -86,16 +123,34 @@ class PortConnection(Connection):
     :type port: Port
     """
     port: Port
+    
+    def __str__(self):
+        return f"Connected to {self.port._component._name} (ID: {str(self.port._id)[:8]}...)"
+
+    def __repr__(self):
+        return f"PortConnection(port_id={self.port._id})"
 
 
 @singleton
 class InputConnection(Connection):
     """Representation of a port's connection to an input
     """
+
+    def __str__(self):
+        return "Circuit Input (Source)"
+    
+    def __repr__(self):
+        return "<InputConnection Singleton>"
     pass
 
 
 @singleton
 class OutputConnection(Connection):
     """Representation of a port's connection to an output"""
+
+    def __str__(self):
+        return "Circuit Output (Sink)"
+    
+    def __repr__(self):
+        return "<OutputConnection Singleton>"
     pass

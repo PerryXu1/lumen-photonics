@@ -14,15 +14,29 @@ class PolarizationRotator(Component):
 
     ## Effect
     Physically swaps H and V energy.
+    
+    :param name: Name of the component
+    :type name: str
     """
     
     __slots__ = ("id", "name", "_num_inputs", "_num_outputs", "_ports", "_port_aliases",
                  "_port_ids", "_in_degree", "_out_degree")
     
-    _COMPONENT_NAME = "PR"
 
-    def __init__(self):
-        super().__init__(self._COMPONENT_NAME, 1, 1)
+    def __init__(self, name: str):
+        super().__init__(name, 1, 1)
+        
+    def __str__(self):
+        return (
+            f"--- Polarization Rotator (90°): {self._name} ---\n"
+            f"  Type:           Fixed mode-converter\n"
+            f"  Function:       H ↔ V Swap\n"
+            f"  Ports:          Port 1 (In) -> Port 2 (Out)\n"
+            f"  Status:         Ideal/Passive"
+        )
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}()"
     
     def get_s_matrix(self, wavelength: float) -> NDArray[np.complex128]:
         """Returns the modified S matrix that mathematically represents the component

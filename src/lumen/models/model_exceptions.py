@@ -1,5 +1,4 @@
 from typing import Optional
-
 from ..models.port import PortType
 from ..models.light import Coherence
 
@@ -19,26 +18,21 @@ class InvalidLightTypeException(Exception):
     
     def __init__(self, coherence: Coherence, message: Optional[str] = None):
         super().__init__(coherence, message)
-        self.message = message
         self.light_type = coherence
+        self.message = message
 
-        
     def __str__(self):
-        """Method that defines the message printed when the exception is thrown.
-        Either a custom message passed into the constructor or the default message.
+        if self.message:
+            return self.message
 
-        :return: A message to be printed when the exception is thrown
-        :rtype: str
-        """
-        
-        if self.message is None:
-            if self.light_type == Coherence.COHERENT:
-                return "Inputted light is coherent, but only incoherent light is accepted"
-            elif self.light_type == Coherence.INCOHERENT:
-                return "Inputted light is incoherent, but only coherent light is accepted"
-        return self.message
+        mode = "COHERENT" if self.light_type == Coherence.COHERENT else "INCOHERENT"
+        expected = "INCOHERENT" if mode == "COHERENT" else "COHERENT"
+        return f"Invalid Light Type: Received {mode}, but the component requires {expected} light."
+    
+    def __repr__(self):
+        return f"{self.__class__.__name__}(coherence={self.light_type!r}, message={self.message!r})"
 
-class PortTypeException(Exception):
+class PortTypeException(Exception): # not needed?
     """Exception thrown when an input port is used for an output-port-specific task or vice versa
     
     :param port_type: The type of the port inputted
@@ -55,18 +49,13 @@ class PortTypeException(Exception):
         self.message = message
         self.port_type = port_type
 
-        
     def __str__(self):
-        """Method that defines the message printed when the exception is thrown.
-        Either a custom message passed into the constructor or the default message.
+        if self.message:
+            return self.message
+            
+        p_type = "INPUT" if self.port_type == PortType.INPUT else "OUTPUT"
+        expected = "OUTPUT" if p_type == "INPUT" else "INPUT"
+        return f"Port Type Mismatch: Port is {p_type}, but this operation requires an {expected} port."
 
-        :return: A message to be printed when the exception is thrown
-        :rtype: str
-        """
-        
-        if self.message is None:
-            if self.light_type == PortType.INPUT:
-                return f"Selected port is an input port, but only output ports are accepted"
-            elif self.light_type == PortType.OUTPUT:
-                return f"Selected port is an output port, but only input ports are accepted"
-        return self.message
+    def __repr__(self):
+        return f"{self.__class__.__name__}(port_type={self.port_type!r}, message={self.message!r})"

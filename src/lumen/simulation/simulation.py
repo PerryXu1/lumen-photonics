@@ -5,6 +5,8 @@ import numpy as np
 from typing import Annotated, Literal
 from numpy.typing import NDArray
 from scipy.sparse import block_diag, csr_matrix, csc_matrix, coo_matrix, linalg, eye
+
+from .simulation_exceptions import EmptyInterfaceException
 from ..models.light import Coherence, CoherentLight, IncoherentLight
 from ..circuit.components.condensed_component import _CondensedComponent
 from ..models.port import InputConnection, OutputConnection, Port, PortConnection, PortType
@@ -19,6 +21,12 @@ class MatrixSolver(Enum):
     
     DENSE = 0
     SPARSE = 1
+    
+    def __repr__(self):
+        return f"<MatrixSolver.{self.name}: {self.value}>"
+
+    def __str__(self):
+        return f"{self.name} Solver"
     
 class Simulation:
     """Simulates a photonic circuit.
@@ -40,10 +48,34 @@ class Simulation:
     
     _DUMMY_WAVELENGTH = 1
     
-    __slots__ = "photonic_circuit",
+    __slots__ = "_photonic_circuit",
     
     def __init__(self, photonic_circuit: PhotonicCircuit):
-        self.photonic_circuit = photonic_circuit
+        self._photonic_circuit = photonic_circuit
+        
+    def __repr__(self):
+        return f"Simulation(photonic_circuit={self._photonic_circuit!r})"
+
+    def __str__(self):
+        # Gather circuit stats for a quick snapshot
+        num_components = len(self._photonic_circuit.components)
+        num_ports = len(self._photonic_circuit.ports)
+        
+        # Determine the recommended solver based on circuit size
+        recommended_solver = (
+            MatrixSolver.SPARSE if num_ports > self._DENSE_DOMAIN_SIZE 
+            else MatrixSolver.DENSE
+        )
+
+        return (
+            f"--- Photonic Simulation Engine ---\n"
+            f"  Circuit:          {self._photonic_circuit.name}\n"
+            f"  Scale:            {num_components} Components | {num_ports} Ports\n"
+        )
+        
+    @property
+    def photonic_circuit(self):
+        return self._photonic_circuit
         
     def simulate(self, times: NDArray[np.float64]) -> SimulationResult:
         """Simulates a photonic circuit. The algorithm first simplifies chains of sequential
@@ -56,12 +88,21 @@ class Simulation:
         :return: List of Light states corresponding to the time array
         :rtype: MutableSequence[Light]
         """
+        
+        if len(self._photonic_circuit._circuit_inputs) == 0 or len(self._photonic_circuit._circuit_outputs) == 0:
+            raise EmptyInterfaceException(self._photonic_circuit)
+        
         # copy circuit as to not modify original circuit
-        photonic_circuit = copy.deepcopy(self.photonic_circuit)
+        photonic_circuit = copy.deepcopy(self._photonic_circuit)
         
         coherence = self._check_coherence(photonic_circuit)
         
-        simulation_result = SimulationResult(coherence)
+        simulation_result = SimulationResult(self._photonic_circuit, coherence)
+        
+        # remove completely disconnected components
+        for component in photonic_circuit.components:
+            if self._is_disconnected(component):
+                photonic_circuit.components.remove(component)
         
         # find all anchor components (where in-degree != 1 or out-degree != 1)
         anchor_components = []
@@ -77,13 +118,13 @@ class Simulation:
                 if port._port_type == PortType.OUTPUT:
                     connection = port.connection
                     if isinstance(connection, PortConnection):
-                        component = connection.port.component
+                        component = connection.port._component
                         sequential_path = self._find_sequential_chain(component, anchor_components)
                         if len(sequential_path) >= 2:
                             sequential_paths.append(sequential_path)
         # iterate through starting at circuit inputs              
-        for circuit_input in photonic_circuit.circuit_inputs:
-            sequential_path = self._find_sequential_chain(circuit_input.component, anchor_components)
+        for circuit_input in photonic_circuit._circuit_inputs:
+            sequential_path = self._find_sequential_chain(circuit_input._component, anchor_components)
             if len(sequential_path) >= 2:
                 sequential_paths.append(sequential_path)
                 
@@ -114,13 +155,13 @@ class Simulation:
         # I, C found
         
         if coherence == Coherence.COHERENT:         
-            laser = next(iter(photonic_circuit.circuit_inputs.values()))
+            laser = next(iter(photonic_circuit._circuit_inputs.values()))
             wavelengths = []
-            max_wavelength = laser(times[0]).wavelength
-            min_wavelength = laser(times[0]).wavelength
+            max_wavelength = laser(times[0])._wavelength
+            min_wavelength = laser(times[0])._wavelength
             
             for time in times:
-                new_wavelength = laser(time).wavelength
+                new_wavelength = laser(time)._wavelength
                 if new_wavelength > max_wavelength:
                     max_wavelength = new_wavelength
                 elif new_wavelength < min_wavelength:
@@ -158,14 +199,14 @@ class Simulation:
                         output_vector = linalg.spsolve(global_matrix, input_vector)
                     
                     # recombines each port's H and V state, which is stored separately in the vector
-                    for output_port_index, output_port in enumerate(photonic_circuit.circuit_outputs):
+                    for output_port_index, output_port in enumerate(photonic_circuit._circuit_outputs):
                         output_index = 2*port_to_index[output_port]
                         
                         light = CoherentLight.from_jones(output_vector[output_index],
                                                 output_vector[output_index + 1], wavelength)
                                                 
                         simulation_result._port_to_output_lights[
-                            self.photonic_circuit.circuit_outputs[output_port_index]].append(light)
+                            self._photonic_circuit._circuit_outputs[output_port_index]].append(light)
             
             else:
                 first_pass = True
@@ -194,14 +235,14 @@ class Simulation:
                         output_vector = linalg.spsolve(global_matrix, input_vector)
                     
                     # recombines each port's H and V state, which is stored separately in the vector
-                    for output_port_index, output_port in enumerate(photonic_circuit.circuit_outputs):
+                    for output_port_index, output_port in enumerate(photonic_circuit._circuit_outputs):
                         output_index = 2*port_to_index[output_port]
                         
                         light = CoherentLight.from_jones(output_vector[output_index],
                                                 output_vector[output_index + 1], wavelength)
                                                 
                         simulation_result._port_to_output_lights[
-                            self.photonic_circuit.circuit_outputs[output_port_index]].append(light)
+                            self._photonic_circuit._circuit_outputs[output_port_index]].append(light)
             
         elif coherence == Coherence.INCOHERENT:
             constant_wavelength = True
@@ -209,11 +250,11 @@ class Simulation:
             min_wavelength = None
             max_wavelength = None
             
-            for laser in photonic_circuit.circuit_inputs.values():
-                min_wavelength = laser(times[0]).wavelength
-                max_wavelength = laser(times[0]).wavelength
+            for laser in photonic_circuit._circuit_inputs.values():
+                min_wavelength = laser(times[0])._wavelength
+                max_wavelength = laser(times[0])._wavelength
                 for time in times:
-                    new_wavelength = laser(time).wavelength
+                    new_wavelength = laser(time)._wavelength
                     input_wavelengths[laser].append(new_wavelength)
                     
                     if new_wavelength > max_wavelength:
@@ -231,7 +272,7 @@ class Simulation:
                 first_pass = True
                 solver = None
                 for time in times:
-                    for laser in photonic_circuit.circuit_inputs.values():
+                    for laser in photonic_circuit._circuit_inputs.values():
                         wavelength = input_wavelengths[laser][0]
                         # updates condensed component s matrices
                         for sequential_path in sequential_paths:
@@ -253,11 +294,11 @@ class Simulation:
                             first_pass = False
                 
                     # make blank incoherent lights for each port
-                    for output_port_index, _ in enumerate(photonic_circuit.circuit_outputs):
+                    for output_port_index, _ in enumerate(photonic_circuit._circuit_outputs):
                         simulation_result._port_to_output_lights[
-                            self.photonic_circuit.circuit_outputs[output_port_index]] \
+                            self._photonic_circuit._circuit_outputs[output_port_index]] \
                             .append(IncoherentLight([]))
-                    for circuit_input_port_index, circuit_input_port in enumerate(photonic_circuit.circuit_inputs):
+                    for circuit_input_port_index, circuit_input_port in enumerate(photonic_circuit._circuit_inputs):
                         global_s_matrix = global_s_matrix_list[circuit_input_port_index]
                         input_vector = self._get_source_input_vector(photonic_circuit,
                                                                     global_s_matrix,
@@ -272,21 +313,21 @@ class Simulation:
                             output_vector = linalg.spsolve(global_matrix, input_vector)
 
                         # recombines each port's H and V state, which is stored separately in the vector
-                        for output_port_index, output_port in enumerate(photonic_circuit.circuit_outputs):
+                        for output_port_index, output_port in enumerate(photonic_circuit._circuit_outputs):
                             output_index = 2*port_to_index[output_port]
                             
                             light = CoherentLight.from_jones(output_vector[output_index],
                                                     output_vector[output_index + 1], wavelength)
                                                     
                             simulation_result._port_to_output_lights[
-                                self.photonic_circuit.circuit_outputs[output_port_index]][-1] \
+                                self._photonic_circuit._circuit_outputs[output_port_index]][-1] \
                                 .coherent_lights.append(light)
                 
             else:
                 first_pass = True
                 solver = None
                 for time_index, time in enumerate(times):
-                    for circuit_input_port, laser in photonic_circuit.circuit_inputs.items():
+                    for circuit_input_port, laser in photonic_circuit._circuit_inputs.items():
                         wavelength = input_wavelengths[laser][time_index]
                         
                         for sequential_path in sequential_paths:
@@ -307,11 +348,11 @@ class Simulation:
                             first_pass = False
                 
                     # make blank incoherent lights for each port
-                    for output_port_index, _ in enumerate(photonic_circuit.circuit_outputs):
+                    for output_port_index, _ in enumerate(photonic_circuit._circuit_outputs):
                         simulation_result._port_to_output_lights[
-                            self.photonic_circuit.circuit_outputs[output_port_index]] \
+                            self._photonic_circuit._circuit_outputs[output_port_index]] \
                             .append(IncoherentLight([]))
-                    for circuit_input_port_index, circuit_input_port in enumerate(photonic_circuit.circuit_inputs):
+                    for circuit_input_port_index, circuit_input_port in enumerate(photonic_circuit._circuit_inputs):
                         global_s_matrix = global_s_matrix_list[circuit_input_port_index]
                         input_vector = self._get_source_input_vector(photonic_circuit, global_s_matrix, 
                                                                      num_ports, port_to_index,
@@ -324,14 +365,14 @@ class Simulation:
                         elif solver == MatrixSolver.SPARSE:
                             output_vector = linalg.spsolve(global_matrix, input_vector)
                         # recombines each port's H and V state, which is stored separately in the vector
-                        for output_port_index, output_port in enumerate(photonic_circuit.circuit_outputs):
+                        for output_port_index, output_port in enumerate(photonic_circuit._circuit_outputs):
                             output_index = 2*port_to_index[output_port]
                             
                             light = CoherentLight.from_jones(output_vector[output_index],
                                                     output_vector[output_index + 1], wavelength)
                                                     
                             simulation_result._port_to_output_lights[
-                                self.photonic_circuit.circuit_outputs[output_port_index]][-1] \
+                                self._photonic_circuit._circuit_outputs[output_port_index]][-1] \
                                 .coherent_lights.append(light)
 
         return simulation_result
@@ -353,9 +394,9 @@ class Simulation:
         while current_component not in anchor_components:
             sequential_components.append(current_component)
             # if sequential, there will only be one output port: _ports[1]
-            current_connection = current_component._ports[1].connection
+            current_connection = current_component._ports[1]._connection
             if isinstance(current_connection, PortConnection):
-                current_component = current_connection.port.component
+                current_component = current_connection.port._component
             else: # no connection (None) or circuit output (OutputConnection)
                 return sequential_components
         return sequential_components
@@ -449,8 +490,8 @@ class Simulation:
         
         # connections referring to the ports that connect to the input/output of the
         # replacement component
-        previous_component_output = replacement_component_input.connection
-        next_component_input = replacement_component_output.connection
+        previous_component_output = replacement_component_input._connection
+        next_component_input = replacement_component_output._connection
         
         # connect previous component to new condensed component
         if isinstance(previous_component_output, PortConnection):
@@ -458,16 +499,16 @@ class Simulation:
             photonic_circuit._connect_by_port(previous_component_output_port, replacement_component._ports[0])
         else:
             # either None or InputConnection or OutputConnection
-            replacement_component._ports[0].connection = previous_component_output
+            replacement_component._ports[0]._connection = previous_component_output
             if isinstance(previous_component_output, InputConnection):
                 # change circuit input to input of new condensed component
-                laser = photonic_circuit.circuit_inputs.get(replacement_component_input)
-                photonic_circuit.circuit_inputs.pop(replacement_component_input)
-                photonic_circuit.circuit_inputs[replacement_component._ports[0]] = laser
+                laser = photonic_circuit._circuit_inputs.get(replacement_component_input)
+                photonic_circuit._circuit_inputs.pop(replacement_component_input)
+                photonic_circuit._circuit_inputs[replacement_component._ports[0]] = laser
             elif isinstance(previous_component_output, OutputConnection):
                 # chnge circuit output to input of new condensed component
-                photonic_circuit.circuit_outputs.pop(replacement_component_input)
-                photonic_circuit.circuit_outputs.append(replacement_component._ports[0])
+                photonic_circuit._circuit_outputs.pop(replacement_component_input)
+                photonic_circuit._circuit_outputs.append(replacement_component._ports[0])
         
         # connect next component to new condensed component
         if isinstance(next_component_input, PortConnection):
@@ -475,19 +516,19 @@ class Simulation:
             photonic_circuit._connect_by_port(next_component_input_port, replacement_component._ports[1])
         else:
             # either None or OutputConnection or InputConnection
-            replacement_component._ports[1].connection = next_component_input
+            replacement_component._ports[1]._connection = next_component_input
             if isinstance(next_component_input, OutputConnection):
                 # change circuit output to output of new condensed component
-                index = photonic_circuit.circuit_outputs.index(replacement_component_output)
-                photonic_circuit.circuit_outputs[index] = replacement_component._ports[1]
+                index = photonic_circuit._circuit_outputs.index(replacement_component_output)
+                photonic_circuit._circuit_outputs[index] = replacement_component._ports[1]
             elif isinstance(next_component_input, InputConnection):
-                laser = photonic_circuit.circuit_inputs.get(replacement_component_output)
-                photonic_circuit.circuit_inputs.pop(replacement_component_output)
-                photonic_circuit.circuit_inputs[replacement_component._ports[1]] = laser
+                laser = photonic_circuit._circuit_inputs.get(replacement_component_output)
+                photonic_circuit._circuit_inputs.pop(replacement_component_output)
+                photonic_circuit._circuit_inputs[replacement_component._ports[1]] = laser
         
         # remove connections to old component list
-        replacement_component_input.connection = None
-        replacement_component_output.connection = None
+        replacement_component_input._connection = None
+        replacement_component_output._connection = None
         # delete old components from component list
         for component in component_list:
             photonic_circuit._components.remove(component)
@@ -556,10 +597,10 @@ class Simulation:
         cols = []
         for component in photonic_circuit.components:
             for port in component._ports:
-                if port.port_type == PortType.OUTPUT:
-                    if isinstance(port.connection, PortConnection):
+                if port._port_type == PortType.OUTPUT:
+                    if isinstance(port._connection, PortConnection):
                         port_index_1 = port_to_index[port]
-                        port_index_2 = port_to_index[port.connection.port]
+                        port_index_2 = port_to_index[port._connection.port]
                                             
                         # H state stored first, then V state
                         p1h, p1v = 2*port_index_1, 2*port_index_1 + 1
@@ -594,14 +635,14 @@ class Simulation:
         # creates external excitation vector a_ext
         # inputs, then outputs
         a_ext = np.zeros(2*num_ports, dtype=complex)
-        for circuit_input_port, laser in photonic_circuit.circuit_inputs.items():
+        for circuit_input_port, laser in photonic_circuit._circuit_inputs.items():
             port_index = port_to_index[circuit_input_port]
             
             # for each input, the corresponding laser value is placed in the corresponding index
             h_index = 2*port_index
             v_index = 2*port_index + 1
-            a_ext[h_index] = laser(time).e[0]
-            a_ext[v_index] = laser(time).e[1]
+            a_ext[h_index] = laser(time)._e[0]
+            a_ext[v_index] = laser(time)._e[1]
         
         return global_s_matrix @ a_ext
     
@@ -629,14 +670,14 @@ class Simulation:
         
         # creates external excitation vector a_ext
         a_ext = np.zeros(2*num_ports, dtype=complex)
-        laser = photonic_circuit.circuit_inputs[circuit_input_port]
+        laser = photonic_circuit._circuit_inputs[circuit_input_port]
         
         port_index = port_to_index[circuit_input_port]
         
         h_index = 2*port_index
         v_index = 2*port_index + 1
-        a_ext[h_index] = laser(time).e[0]
-        a_ext[v_index] = laser(time).e[1]
+        a_ext[h_index] = laser(time)._e[0]
+        a_ext[v_index] = laser(time)._e[1]
         
         return global_s_matrix @ a_ext
         
@@ -668,8 +709,23 @@ class Simulation:
         
         return MatrixSolver.DENSE
     
+    def _is_disconnected(self, component: Component) -> bool:
+        """Checks if a component is completely disconnected from the rest of the circuit.
+        
+        :param component: The component to be checked
+        :type component: Component
+        :return: Whether the component is completely disconnected from the rest of the circuit
+        :rtype: bool
+        """
+
+        for port in component._ports:
+            if port._connection is not None:
+                return False
+        return True
+        
+    
     def _check_coherence(self, photonic_circuit: PhotonicCircuit) -> Coherence:
-        """Checks if the light in the circuit is coherent or incoherent
+        """Checks if the light in the circuit is coherent or incoherent.
         
         :param photonic_circuit: The circuit to be checked
         :type photonic_circuit: PhotonicCircuit
@@ -677,7 +733,7 @@ class Simulation:
         :rtype: Coherence
         """
         
-        circuit_inputs = photonic_circuit.circuit_inputs
+        circuit_inputs = photonic_circuit._circuit_inputs
         
         if len(circuit_inputs) == 1:
             return Coherence.COHERENT

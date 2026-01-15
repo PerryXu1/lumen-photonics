@@ -30,6 +30,16 @@ class Poincare(DisplayOne, DisplayMany):
     def  __init__(self, *, settings: Optional[DisplaySettings] = None):
         super().__init__(settings)
         
+    def __str__(self):
+        return (
+            f"--- {self.__class__.__name__} Display ---\n"
+            f"  Coordinate:    Stokes (S1, S2, S3) Normalized\n"
+            f"  Visuals:       3D Projection with Persistence Trail\n"
+        )
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(settings={self.settings!r})"
+        
     def display_one(self, light: Light) -> None:
         """Displays a single light state on the Poincare sphere.
         

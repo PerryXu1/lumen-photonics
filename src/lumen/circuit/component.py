@@ -1,41 +1,37 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import TypeVar
 import numpy as np
 from numpy.typing import NDArray
 from ..models.port import Port, PortConnection, PortType
 from uuid import uuid4
 
-T = TypeVar("T", bound="Component")
-
-
 @dataclass(frozen=True, slots=True)
 class PortRef:
-    """Class used to specify a port belonging to a component. Whether the port specified
-    is an input or output port depends on the context of the method this class is being
-    passed into.
+    """Class used to specify a port belonging to a component. 
     
-    :param component: The component that the port belongs to
-    :type component: Component
+    :param component_name: The name of the component that the port belongs to
+    :type component_name: str
     :param port_name: The index or alias of the port
     :type port_name: str or int
     """
     
-    component: T
+    component_name: str
     port_name: str | int
+    
+    def __repr__(self):
+        return f"PortRef(comp={self.component_name!r}, port={self.port_name!r})"
 
-    def __iter__(self) -> Iterator[T | str | int]:
+    def __iter__(self) -> Iterator[str | str | int]:
         """
         Return an iterator over the dataclass fields in declaration order.
 
         :return: An iterator over the dataclass fields
-        :rtype: Iterator[Component | str | int]
+        :rtype: Iterator[str | str | int]
         """
 
-        return iter((self.component, self.port_name))
-
-
+        return iter((self.component_name, self.port_name))
+    
 class Component(ABC):
     """Class representing an abstract representation of a component within the photonics circuit.
 
@@ -52,12 +48,14 @@ class Component(ABC):
     :type s_matrix: np.ndarray[np.complex128]
     """
 
-    __slots__ = ("id", "name", "_num_inputs", "_num_outputs", "_ports", "_port_aliases",
-                 "_port_ids", "_in_degree", "_out_degree")
+    __slots__ = ("_id", "_name", "_photonic_circuit", "_num_inputs", "_num_outputs",
+                 "_ports", "_port_aliases", "_port_ids", "_in_degree", "_out_degree")
 
     def __init__(self, name: str, num_inputs: int, num_outputs: int):
-        self.id = uuid4()
-        self.name = name
+        self._id = uuid4()
+        self._name = name
+        self._photonic_circuit = None
+        
         self._num_inputs = num_inputs
         self._num_outputs = num_outputs
         
@@ -69,10 +67,50 @@ class Component(ABC):
         # maps ids to ports
         self._port_ids = {}
         for port in self._ports:
-            self._port_ids[port.id] = port
+            self._port_ids[port._id] = port
 
         self._in_degree = 0
         self._out_degree = 0
+        
+    def __str__(self):
+        return (
+            f"{self._name} ({self.__class__.__name__}): "
+            f"{self._in_degree}/{self._num_inputs} inputs connected, "
+            f"{self._out_degree}/{self._num_outputs} outputs connected."
+        )
+        
+    def __repr__(self):
+        return (
+            f"<{self.__class__.__name__} "
+            f"name={self._name!r}, "
+            f"id={str(self._id)[:8]}..., "
+            f"in={self._num_inputs}, "
+            f"out={self._num_outputs}>"
+        )
+        
+    @property
+    def id(self):
+        return self._id
+    
+    @property
+    def name(self):
+        return self._name
+    
+    @property
+    def photonic_circuit(self):
+        return self._photonic_circuit
+    
+    @property
+    def num_inputs(self):
+        return self._num_inputs
+    
+    @property
+    def num_outputs(self):
+        return self._num_outputs
+    
+    @property
+    def ports(self):
+        return self._ports
 
     @abstractmethod
     def get_s_matrix(self, wavelength: float) -> NDArray[np.complex128]:
@@ -129,16 +167,16 @@ class Component(ABC):
         :type to: PortRef
         """
 
-        port1 = self._get_port_from_ref(port_ref=PortRef(self, port_name))
+        port1 = self._get_port_from_ref(port_ref=PortRef(self._name, port_name))
         port2 = self._get_port_from_ref(port_ref=to)
 
-        if port1.connection is None:
-            if port1.port_type == PortType.INPUT:
+        if port1._connection is None:
+            if port1._port_type == PortType.INPUT:
                 self._in_degree += 1
-            elif port2.port_type == PortType.OUTPUT:
+            elif port2._port_type == PortType.OUTPUT:
                 self._out_degree += 1
 
-        port1.connection = PortConnection(port2)
+        port1._connection = PortConnection(port2)
 
     def disconnect_port(self, port_name: int | str) -> None:
         """Disconnects the specified input.
@@ -146,22 +184,22 @@ class Component(ABC):
         :param input_port_name: The index or alias of the input port
         :type input_port_name: int, str
         """
-        port = self._get_port_from_ref(port_ref=PortRef(self, port_name))
+        port = self._get_port_from_ref(port_ref=PortRef(self._name, port_name))
 
-        if port.connection is not None:
-            if port.port_type == PortType.INPUT:
+        if port._connection is not None:
+            if port._port_type == PortType.INPUT:
                 self._in_degree -= 1
-            elif port.port_type == PortType.OUTPUT:
+            elif port._port_type == PortType.OUTPUT:
                 self._out_degree -= 1
-        port.connection = None
+        port._connection = None
         
     def _disconnect_by_port(self, port: Port) -> None:
-        if port.connection is not None:
-            if port.port_type == PortType.INPUT:
+        if port._connection is not None:
+            if port._port_type == PortType.INPUT:
                 self._in_degree -= 1
-            elif port.port_type == PortType.OUTPUT:
+            elif port._port_type == PortType.OUTPUT:
                 self._out_degree -= 1
-        port.connection = None
+        port._connection = None
 
     def _get_port_from_ref(self, *, port_ref: PortRef) -> Port:
         """Gets the input port specified by the port reference passed in.
@@ -170,9 +208,13 @@ class Component(ABC):
         :type to: PortRef
         """
         
-        from .circuit_exceptions import MissingAliasException
+        from .circuit_exceptions import MissingAliasException, MissingComponentException
 
-        component, port_name = port_ref
+        component_name, port_name = port_ref
+        
+        if component_name not in self._photonic_circuit._names_to_components.keys():
+            raise MissingComponentException(component_name)
+        component = self._photonic_circuit._names_to_components[component_name]
 
         if isinstance(port_name, int):
             port = component._ports[port_name - 1]

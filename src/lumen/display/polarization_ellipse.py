@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 from typing import MutableSequence, Optional
 
 from matplotlib.axes import Axes
@@ -36,6 +35,18 @@ class PolarizationEllipse(DisplayOne, DisplayMany):
     
     def __init__(self, *, settings: Optional[DisplaySettings] = None):
         super().__init__(settings)
+
+    def __str__(self) -> str:
+        return (
+            f"--- {self.__class__.__name__} ---\n"
+            f"  Resolution: {self._NUM_POINTS} pts\n"
+            f"  Frequency:  {self._OMEGA:.2f} rad/s\n"
+            f"  Window:     ±{self._AXIS_LIMIT} normalized units\n"
+            f"  Mode:       2D Projection (Ex-Ey plane)"
+        )
+        
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(settings={self.settings!r})"
         
     def display_one(self, light: Light, *, FPS:int = DEFAULT_FPS,
                     total_time: float = DEFAULT_TOTAL_TIME) -> None:

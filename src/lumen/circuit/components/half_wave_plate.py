@@ -2,8 +2,8 @@ from ..component import Component
 import numpy as np
 from numpy.typing import NDArray
 
-class FaradayRotator(Component):
-    """2-port (1 input, 1 output) non-reciprocal device that rotates the plane of polarization.
+class HalfWavePlate(Component):
+    """2-port polarization retarder. Shifts phase between fast and slow axes by pi. AKA HWP
 
     ## Port Designations
     - Inputs: Port 1
@@ -13,31 +13,30 @@ class FaradayRotator(Component):
     - Port 1 <-> Port 2
 
     ## Effect
-    Rotates the plane of polarization. Unlike a wave plate, a Faraday Rotator rotates
-    polarization by an angle theta in the same absolute direction regardless of
-    propagation direction (1->2 or 2->1).
-    
+    Shifts phase between fast and slow axes by pi (180 deg). Used to rotate linear polarization.
+
     :param name: Name of the component
     :type name: str
-    :param angle: Angle that the rotator rotates the polarization states by [rad]
+    :param angle: The angle that the HWP is oriented relative to the horizontal state [rad]
     :type angle: float
     """
     
     __slots__ = ("id", "name", "_num_inputs", "_num_outputs", "_ports", "_port_aliases",
                  "_port_ids", "_in_degree", "_out_degree", "_angle")
     
-
     def __init__(self, *, name: str, angle: float):
         super().__init__(name, 1, 1)
         self._angle = angle
         
     def __str__(self):
         angle_deg = np.degrees(self._angle)
+        effective_rot = (2 * angle_deg) % 360
         
         return (
-            f"--- Faraday Rotator: {self._name} ---\n"
-            f"  Rotation Angle: {self._angle:.4f} rad ({angle_deg:.2f}°)\n"
-            f"  Non-reciprocal: Yes\n"
+            f"--- Half-Wave Plate (HWP): {self._name} ---\n"
+            f"  Orientation Angle: {self._angle:.4f} rad ({angle_deg:.2f}°)\n"
+            f"  Effective Rotation: {effective_rot:.2f}° (for linear polarization)\n"
+            f"  Phase Retardation: π (180°)\n"
             f"  Ports: Port 1 (In) -> Port 2 (Out)"
         )
         
@@ -57,12 +56,12 @@ class FaradayRotator(Component):
         :rtype: NDArray[np.complex128]
         """
         
-        cos = np.cos(self._angle)
-        sin = np.sin(self._angle)
+        cos = np.cos(2*self._angle)
+        sin = np.sin(2*self._angle)
         
         return np.array([
             [    0,    0,  cos,  sin],
-            [    0,    0, -sin,  cos],
-            [  cos, -sin,    0,    0],
+            [    0,    0,  sin, -cos],
+            [  cos,  sin,    0,    0],
             [  sin, -cos,    0,    0]
         ], dtype=float)

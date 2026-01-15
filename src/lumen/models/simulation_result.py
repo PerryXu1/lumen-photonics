@@ -2,13 +2,16 @@ from collections import defaultdict
 from typing import Literal, MutableSequence
 import numpy as np
 from numpy.typing import NDArray
-
 from ..models.model_exceptions import InvalidLightTypeException
 from ..simulation.simulation import Coherence
 from ..models.port import Port
 from ..circuit.component import PortRef
 from ..models.light import IncoherentLight, Light
+from typing import TYPE_CHECKING
 
+# avoids circular import errors from type hinting
+if TYPE_CHECKING:
+    from ..circuit.photonic_circuit import PhotonicCircuit
 
 class SimulationResult:
     """The resulting light states of a simulation. Used to map ports to lists
@@ -18,9 +21,31 @@ class SimulationResult:
     :type coherence: Coherence
     """
     
-    def __init__(self, coherence: Coherence):
+    def __init__(self, photonic_circuit: "PhotonicCircuit", coherence: Coherence):
+        self._photonic_circuit = photonic_circuit
         self._port_to_output_lights = defaultdict(list)
-        self.coherence = coherence
+        self._coherence = coherence
+        
+    def __str__(self):
+        port_count = len(self._port_to_output_lights)
+        
+        port_summary = []
+        for port, lights in self._port_to_output_lights.items():
+            if lights:
+                avg_p = np.mean([l.intensity if hasattr(l, 'intensity') else l.intensity() for l in lights])
+                port_summary.append(f"    - {port.component._name} (Port {port._id.hex[:4]}): {len(lights)} states, Avg Power: {avg_p:.2e}")
+
+        summary_text = "\n".join(port_summary) if port_summary else "    (No output data recorded)"
+
+        return (
+            f"--- Simulation Results [{self._coherence.name}] ---\n"
+            f"  Total Active Ports: {port_count}\n"
+            f"  Port Data Breakdown:\n{summary_text}"
+        )
+
+    def __repr__(self):
+        return (f"SimulationResult(coherence={self._coherence!r}, "
+                f"recorded_ports={list(self._port_to_output_lights.keys())!r})")
     
     def __getitem__(self, port_ref: PortRef) -> MutableSequence[Light]:
         """Returns list of lights corresponding to a port reference. Makes class itself callable
@@ -35,6 +60,14 @@ class SimulationResult:
         
         return self._port_to_output_lights[output_port]
     
+    @property
+    def photonic_circuit(self):
+        return self._photonic_circuit
+    
+    @property
+    def coherence(self) -> Coherence:        
+        return self.coherence
+    
     def get_power(self, port_ref: PortRef) -> NDArray[np.float64]:
         """Returns the power outputted at the specified output port for every light state.
         
@@ -43,11 +76,11 @@ class SimulationResult:
         :return: The power for every light state
         :rtype: NDArray[np.float64]
         """
-        if self.coherence == Coherence.COHERENT:
+        if self._coherence == Coherence.COHERENT:
             eh, ev = self._get_arrays(port_ref)
             return np.abs(eh)**2 + np.abs(ev)**2
         
-        elif self.coherence == Coherence.INCOHERENT:
+        elif self._coherence == Coherence.INCOHERENT:
             power_list = []
             output_port = self._get_output_port(port_ref)
             light_states = self._port_to_output_lights[output_port]
@@ -64,11 +97,11 @@ class SimulationResult:
         :return: The power for every light state
         :rtype: NDArray[np.float64]
         """
-        if self.coherence == Coherence.COHERENT:
+        if self._coherence == Coherence.COHERENT:
             eh, ev = self._get_arrays(port_ref) # TODO: fix
             return np.abs(eh)**2
         
-        elif self.coherence == Coherence.INCOHERENT:
+        elif self._coherence == Coherence.INCOHERENT:
             power_list = []
             output_port = self._get_output_port(port_ref)
             light_states = self._port_to_output_lights[output_port]
@@ -85,11 +118,11 @@ class SimulationResult:
         :return: The power for every light state
         :rtype: NDArray[np.float64]
         """
-        if self.coherence == Coherence.COHERENT:
+        if self._coherence == Coherence.COHERENT:
             eh, ev = self._get_arrays(port_ref) # TODO: fix
             return np.abs(ev)**2
         
-        elif self.coherence == Coherence.INCOHERENT:
+        elif self._coherence == Coherence.INCOHERENT:
             power_list = []
             output_port = self._get_output_port(port_ref)
             light_states = self._port_to_output_lights[output_port]
@@ -133,13 +166,13 @@ class SimulationResult:
         :rtype: NDArray[np.float64]
         """
         
-        if self.coherence == Coherence.COHERENT:
+        if self._coherence == Coherence.COHERENT:
             eh, ev = self._get_arrays(port_ref)
             if mode == "horizontal":
-                return np.angle(ev)
-            return np.angle(eh)
+                return np.angle(eh)
+            return np.angle(ev)
         else:
-            raise InvalidLightTypeException(self.coherence)
+            raise InvalidLightTypeException(self._coherence)
             
     
     def get_relative_phase(self, port_ref: PortRef) -> NDArray[np.float64]:
@@ -177,16 +210,19 @@ class SimulationResult:
         :rtype: Port
         """
         
-        from ..circuit.circuit_exceptions import MissingAliasException
+        from ..circuit.circuit_exceptions import MissingAliasException, MissingComponentException
+
+        component_name, port_name = port_ref
         
-        component, output_port_name = port_ref
-        
-        if isinstance(output_port_name, int):
-            port = component._ports[output_port_name - 1]
-            return port
-        elif isinstance(output_port_name, str):
-            if output_port_name in component._port_aliases:
-                port = component._port_aliases[output_port_name]
-                return component._output_port_aliases[output_port_name]
+        if component_name not in self._photonic_circuit._names_to_components:
+            raise MissingComponentException(component_name)
+        component = self._photonic_circuit._names_to_components[component_name]
+
+        if isinstance(port_name, int):
+            port = component._ports[port_name - 1]
+        elif isinstance(port_name, str):
+            if port_name in component._port_aliases:
+                port = component._port_aliases[port_name]
             else:
-                raise MissingAliasException(output_port_name)
+                raise MissingAliasException(port_name)
+        return port
