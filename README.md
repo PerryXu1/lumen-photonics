@@ -4,7 +4,7 @@ A Python-based simulation engine for designing and analyzing photonic circuits. 
 
 ## Features
 
-* **Modular Component System**: Pre-defined component classes that can be used within photonic circuits. Users can also dedfine their own components.
+* **Modular Component System**: Pre-defined component classes that can be used within photonic circuits. Users can also define their own components.
 * **Smart Connectivity**: Handles port-to-port connections with internal validation.
 * **Feedback Logic**: Support for recursive or looping paths within the circuit architecture.
 * **Robust Simulator**: Efficient simulation algorithm that simplifies and solves complex circuits
@@ -31,7 +31,7 @@ Incoherent light is modelled as a list of Jones vectors, representing the light 
 
 Both coherent light and incoherent light can be easily converted to Stokes vectors.
 
-Components are represented as modified S (Scattering) matrices. S matrices are used to model the transmission and reflection for each combination of ports for any component. Element (i, j) relates the outgoing light at port i to the incoming light at port j. As such, elements along the main diagonal describe the reflection of light at each port, while off-diagonal elements describe the transmission of light from port j to port i. This framework is modified by replacing each port with two entries: the first for horizontal polarization of light and the second for vertical polarization of light. This framework is called a **Modified S-Matrix** (**MSM**) The element representing transmission/reflection from port j to port i is replaced by a 2x2 block spanning (2i, 2j) to (2i+1. 2j+1). For an N port component, its MSM is 2N x 2N. A 2 port component's MSM is shown below:
+Components are represented as modified S (Scattering) matrices. S matrices are used to model the transmission and reflection for each combination of ports for any component. Element (i, j) relates the outgoing light at port i to the incoming light at port j.As such, elements along the main diagonal describe the reflection of light at each port, while off-diagonal elements describe the transmission of light from port j to port i. This framework is modified by replacing each port with two entries: the first for horizontal polarization of light and the second for vertical polarization of light. This framework is called a **Modified S-Matrix** (**MSM**) The element representing transmission/reflection from port j to port i is replaced by a 2x2 block spanning (2i, 2j) to (2i+1. 2j+1). For an N port component, its MSM is 2N x 2N. A 2 port component's MSM is shown below:
 
 ```math
 S = \begin{pmatrix} S_{1H, 1H} & S_{1H, 1V} & S_{1H, 2H} & S_{1H, 2V} \\ S_{1V, 1H} & S_{1V, 1V} & S_{1V, 2H} & S_{1V, 2V} \\ S_{2H, 1H} & S_{2H, 1V} & S_{2H, 2H} & S_{2H, 2V} \\ S_{2V, 1H} & S_{2V, 1V} & S_{2V, 2H} & S_{2V, 2V} \end{pmatrix}
