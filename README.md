@@ -24,7 +24,7 @@ A Python-based simulation engine for designing and analyzing photonic circuits. 
 Coherent light is primarily modelled as a Jones vector, which represent the amplitude and phase of the horizontal and vertical components of light:
 
 ```math
-\mathbf{J} = \begin{pmatrix} E_H e^{i\phi_H} \\ E_V e^{i\phi_V} \end{pmatrix}
+\vec{J} = \begin{pmatrix} E_H e^{i\phi_H} \\ E_V e^{i\phi_V} \end{pmatrix}
 ```
 
 Incoherent light is modelled as a list of Jones vectors, representing the light that it is composed out of.
