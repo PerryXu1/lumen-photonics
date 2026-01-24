@@ -86,7 +86,7 @@ class Simulation:
         :param times: Array of time values at which the photonic circuit is simulated
         :type times: np.ndarray[np.float64]
         :return: List of Light states corresponding to the time array
-        :rtype: MutableSequence[Light]
+        :rtype: SimulationResult
         """
         
         if len(self._photonic_circuit._circuit_inputs) == 0 or len(self._photonic_circuit._circuit_outputs) == 0:
@@ -99,38 +99,7 @@ class Simulation:
         
         simulation_result = SimulationResult(self._photonic_circuit, coherence)
         
-        # remove completely disconnected components
-        for component in photonic_circuit.components:
-            if self._is_disconnected(component):
-                photonic_circuit.components.remove(component)
-        
-        # find all anchor components (where in-degree != 1 or out-degree != 1)
-        anchor_components = []
-        for component in photonic_circuit.components:
-            if component._in_degree != 1 or component._out_degree != 1:
-                anchor_components.append(component)
-                
-        # find all sequential paths
-        sequential_paths = []
-        # iterate through starting at outputs of anchor components
-        for anchor_component in anchor_components:
-            for port in anchor_component._ports:
-                if port._port_type == PortType.OUTPUT:
-                    connection = port.connection
-                    if isinstance(connection, PortConnection):
-                        component = connection.port._component
-                        sequential_path = self._find_sequential_chain(component, anchor_components)
-                        if len(sequential_path) >= 2:
-                            sequential_paths.append(sequential_path)
-        # iterate through starting at circuit inputs              
-        for circuit_input in photonic_circuit._circuit_inputs:
-            sequential_path = self._find_sequential_chain(circuit_input._component, anchor_components)
-            if len(sequential_path) >= 2:
-                sequential_paths.append(sequential_path)
-                
-        # collapse each sequential path initial to get basic structure of simplified circuit
-        for sequential_path in sequential_paths:
-            self._condense_sequential_chain_coherent(photonic_circuit, sequential_path, self._DUMMY_WAVELENGTH)
+        sequential_paths = self._condense_circuit(photonic_circuit)
 
         # get port-index maps and number of ports
         num_ports = 0
@@ -380,6 +349,101 @@ class Simulation:
                                 .coherent_lights.append(light)
 
         return simulation_result
+    
+    def get_s_parameters(self, wavelengths: NDArray[np.float64]) -> MutableSequence[NDArray]:
+        """Simulates a photonic circuit's overall S-matrix as a function of wavelength.
+        The algorithm first simplifies chains of sequential components (components with one
+        input port and one output port) into single components using the Redheffer Star 
+        operation. Afterwards, the whole simplified circuit is represented by a single matrix.
+        This method assumes that for any time, the wavelength across all inputs is equal and coherent.
+        Independent of actual input laser values.
+        
+        :param wavelengths: Array of wavelength values at which the photonic circuit is simulated
+        :type wavelengths: np.ndarray[np.float64]
+        :return: List of S-matrices
+        :rtype: MutableSequence[NDArray]
+        """
+        
+        if len(self._photonic_circuit._circuit_inputs) == 0 or len(self._photonic_circuit._circuit_outputs) == 0:
+            raise EmptyInterfaceException(self._photonic_circuit)
+        
+        # copy circuit as to not modify original circuit
+        photonic_circuit = copy.deepcopy(self._photonic_circuit)
+        
+        S_parameter_list = []
+        
+        self._condense_circuit(photonic_circuit)
+        
+        # get port-index maps and number of ports
+        num_ports = 0
+        port_to_index = {}
+        index_to_port = []
+        # inputs indexed first, then outputs
+        for component in photonic_circuit.components:
+            for port in component._ports:
+                port_to_index[port] = num_ports
+                index_to_port.append(port)
+                num_ports += 1
+                
+        # Connectivity matrix
+        connectivity_matrix = self._get_connectivity_matrix(photonic_circuit, num_ports, port_to_index)
+
+        # making the global matrix (I - SC)
+        dimension = connectivity_matrix.shape[0] # S, C, and SC have the same dimensions
+        identity = eye(dimension)
+        
+        first_pass = True
+        solver = None
+        for wavelength in wavelengths:             
+            # Global S Matrix
+            component_matrices = [component.get_s_matrix(wavelength) for component in photonic_circuit.components]
+            global_s_matrix = block_diag(component_matrices, format = "csr")
+                    
+            global_matrix = identity - (global_s_matrix @ connectivity_matrix)
+            
+            if first_pass:
+                solver = self._select_solver(global_matrix)
+                first_pass = False
+            
+            if solver == MatrixSolver.DENSE:
+                condensed_matrix = np.linalg.solve(global_matrix.toarray(), global_s_matrix.toarray())
+                photonic_circuit._circuit_inputs
+                
+                # get external interface S matrix
+                input_port_indices = []
+                output_port_indices = []
+                for circuit_input in photonic_circuit._circuit_inputs:
+                    input_port_index = port_to_index[circuit_input]
+                    input_port_indices.append(2*input_port_index)
+                    input_port_indices.append(2*input_port_index + 1)
+                for circuit_output in photonic_circuit._circuit_outputs:
+                    output_port_index = port_to_index[circuit_output]
+                    output_port_indices.append(2*output_port_index)
+                    output_port_indices.append(2*output_port_index + 1)
+
+                S_parameter_list.append(condensed_matrix[np.ix_(output_port_indices, input_port_indices)])
+
+            elif solver == MatrixSolver.SPARSE:
+                condensed_matrix = linalg.spsolve(global_matrix, global_s_matrix).toarray()
+                
+                # get external interface S matrix
+                input_port_indices = []
+                output_port_indices = []
+                for circuit_input in photonic_circuit._circuit_inputs:
+                    input_port_index = port_to_index[circuit_input]
+                    input_port_indices.append(2*input_port_index)
+                    input_port_indices.append(2*input_port_index + 1)
+                for circuit_output in photonic_circuit._circuit_outputs:
+                    output_port_index = port_to_index[circuit_output]
+                    output_port_indices.append(2*output_port_index)
+                    output_port_indices.append(2*output_port_index + 1)
+                    
+                S_parameter_list.append(condensed_matrix[np.ix_(output_port_indices, input_port_indices)])
+        
+        return S_parameter_list
+            
+        
+        
             
     def _find_sequential_chain(self, component: Component,
                                anchor_components: MutableSequence[Component]) -> MutableSequence[Component]:
@@ -743,5 +807,50 @@ class Simulation:
             return Coherence.COHERENT
         
         return Coherence.INCOHERENT
+    
+    def _condense_circuit(self, photonic_circuit: PhotonicCircuit) -> MutableSequence[Component]:
+        """Simplifies the inputted circuit. Removes completely disconnected components and simplifies sequential chains using
+        redheffer star products.
+        
+        :param photonic_circuit: The photonic circuit to simplify
+        :type photonic_circuit: PhotonicCircuit
+        :return: Sequential chains of components, for later use in simulation
+        :rtype: MutableSequence[Component]
+        """
+        
+        # remove completely disconnected components
+        for component in photonic_circuit.components:
+            if self._is_disconnected(component):
+                photonic_circuit.components.remove(component)
+        
+        # find all anchor components (where in-degree != 1 or out-degree != 1)
+        anchor_components = []
+        for component in photonic_circuit.components:
+            if component._in_degree != 1 or component._out_degree != 1:
+                anchor_components.append(component)
+                
+        # find all sequential paths
+        sequential_paths = []
+        # iterate through starting at outputs of anchor components
+        for anchor_component in anchor_components:
+            for port in anchor_component._ports:
+                if port._port_type == PortType.OUTPUT:
+                    connection = port.connection
+                    if isinstance(connection, PortConnection):
+                        component = connection.port._component
+                        sequential_path = self._find_sequential_chain(component, anchor_components)
+                        if len(sequential_path) >= 2:
+                            sequential_paths.append(sequential_path)
+        # iterate through starting at circuit inputs              
+        for circuit_input in photonic_circuit._circuit_inputs:
+            sequential_path = self._find_sequential_chain(circuit_input._component, anchor_components)
+            if len(sequential_path) >= 2:
+                sequential_paths.append(sequential_path)
+                
+        # collapse each sequential path initial to get basic structure of simplified circuit
+        for sequential_path in sequential_paths:
+            self._condense_sequential_chain_coherent(photonic_circuit, sequential_path, self._DUMMY_WAVELENGTH)
+            
+        return sequential_paths
     
     
