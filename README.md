@@ -19,6 +19,7 @@ Since this project is currently in development, it is hosted on TestPyPI. To ins
 
 ```bash
 pip install --index-url [https://test.pypi.org/simple/](https://test.pypi.org/simple/) --extra-index-url [https://pypi.org/simple/](https://pypi.org/simple/) lumen-photonics
+```
 
 ## Mathematical Model - Components & Light
 
