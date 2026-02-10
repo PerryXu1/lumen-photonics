@@ -63,7 +63,7 @@ Implementation of a Mach-Zehnder Interferometer
 
 ```python
 import numpy as np
-import lumen
+import lumen_photonics
 
 # initialize circuit
 circuit = PhotonicCircuit()
