@@ -1,6 +1,6 @@
-from ..component import Component
 import numpy as np
 from numpy.typing import NDArray
+from ..component import Component
 
 class PhaseShifter(Component):
     """2-port (1 input, 1 output) waveguide segment that applies a phase delay to the signal.

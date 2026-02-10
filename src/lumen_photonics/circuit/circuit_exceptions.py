@@ -1,6 +1,5 @@
 from typing import Literal, Optional
 from typing import TYPE_CHECKING
-
 from .component import Component, PortRef
 from ..models.port import Port
 

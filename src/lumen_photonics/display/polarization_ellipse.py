@@ -5,12 +5,12 @@ from matplotlib.quiver import Quiver
 from matplotlib.text import Text
 from matplotlib.animation import FuncAnimation
 from matplotlib.lines import Line2D
-from ..models.light import Light
-from .display import DisplayOne, DisplayMany, DisplaySettings
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from numpy.typing import NDArray
+from ..models.light import Light
+from .display import DisplayOne, DisplayMany, DisplaySettings
 
 
 class PolarizationEllipse(DisplayOne, DisplayMany):

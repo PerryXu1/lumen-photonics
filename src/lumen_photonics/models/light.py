@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Sequence
-from lumen.models.stokes import Stokes, StokesParameters
+from ..models.stokes import Stokes, StokesParameters
 import numpy as np
 
 class Light(ABC):

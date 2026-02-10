@@ -1,6 +1,6 @@
-from ..component import Component
 import numpy as np
 from numpy.typing import NDArray
+from ..component import Component
 
 class BeamSplitter(Component):
     """4-port (2 input, 2 output) component that splits and combines optical signals.

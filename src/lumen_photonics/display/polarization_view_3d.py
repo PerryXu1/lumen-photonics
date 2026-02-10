@@ -3,10 +3,10 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 from matplotlib.text import Text
 import numpy as np
-from ..models.light import Light
-from .display import DisplayOne, DisplaySettings
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from ..models.light import Light
+from .display import DisplayOne, DisplaySettings
 
 class PolarizationView3D(DisplayOne):
     """Shows a 3D view of the horizontal polarization state,

@@ -1,6 +1,7 @@
-from ..component import Component
 import numpy as np
 from numpy.typing import NDArray
+from ..component import Component
+
 
 class MachZehnderInterferometer(Component):
     """

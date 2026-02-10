@@ -5,7 +5,6 @@ import numpy as np
 from typing import Annotated, Literal
 from numpy.typing import NDArray
 from scipy.sparse import block_diag, csr_matrix, csc_matrix, coo_matrix, linalg, eye
-
 from .simulation_exceptions import EmptyInterfaceException
 from ..models.light import Coherence, CoherentLight, IncoherentLight
 from ..circuit.components.condensed_component import _CondensedComponent

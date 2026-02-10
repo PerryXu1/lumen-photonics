@@ -1,7 +1,7 @@
 from typing import Literal
-from ..component import Component
 import numpy as np
 from numpy.typing import NDArray
+from ..component import Component
 
 class QuarterWavePlate(Component):
     """2-port polarization retarder. Shifts phase between fast and slow axes by pi/2. AKA QWP

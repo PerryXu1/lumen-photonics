@@ -1,6 +1,7 @@
-from ..component import Component
 import numpy as np
 from numpy.typing import NDArray
+from ..component import Component
+
 
 class FaradayRotator(Component):
     """2-port (1 input, 1 output) non-reciprocal device that rotates the plane of polarization.

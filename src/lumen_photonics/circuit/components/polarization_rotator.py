@@ -1,6 +1,6 @@
-from ..component import Component
 import numpy as np
 from numpy.typing import NDArray
+from ..component import Component
 
 class PolarizationRotator(Component):
     """90-degree polarization rotator.

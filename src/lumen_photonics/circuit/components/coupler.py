@@ -1,6 +1,6 @@
-from ..component import Component
 import numpy as np
 from numpy.typing import NDArray
+from ..component import Component
 
 class Coupler(Component):
     """4-port component (2 input, 2 output) used to split or combine light signals.

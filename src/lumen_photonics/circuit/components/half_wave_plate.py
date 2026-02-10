@@ -1,6 +1,7 @@
-from ..component import Component
 import numpy as np
 from numpy.typing import NDArray
+from ..component import Component
+
 
 class HalfWavePlate(Component):
     """2-port polarization retarder. Shifts phase between fast and slow axes by pi. AKA HWP

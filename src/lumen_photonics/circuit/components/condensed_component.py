@@ -1,6 +1,6 @@
-from ..component import Component
 import numpy as np
 from numpy.typing import NDArray
+from ..component import Component
 
 class _CondensedComponent(Component):
     """Class representing a chain of sequential components condensed into a single component.

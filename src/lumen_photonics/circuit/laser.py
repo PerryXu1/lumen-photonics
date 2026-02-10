@@ -1,6 +1,4 @@
 from collections.abc import Callable
-from typing import TYPE_CHECKING
-
 from ..circuit.circuit_exceptions import InvalidLightFunctionException
 from ..models.light import CoherentLight, Light
 

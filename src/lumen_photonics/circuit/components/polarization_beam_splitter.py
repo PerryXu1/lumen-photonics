@@ -1,7 +1,7 @@
 from typing import Literal
-from ..component import Component
 import numpy as np
 from numpy.typing import NDArray
+from ..component import Component
 
 class PolarizationBeamSplitter(Component):
     """A 4-port device that physically separates H and V polarization components.

@@ -1,9 +1,9 @@
 from collections.abc import MutableMapping, MutableSequence
+from uuid import UUID, uuid4 
 from ..circuit.laser import Laser
-from ..models.port import InputConnection, OutputConnection, Port, PortConnection, PortType
+from ..models.port import InputConnection, OutputConnection, Port, PortConnection
 from .component import Component, PortRef
 from .circuit_exceptions import ConflictingConnectionException, DuplicateComponentException, DuplicateComponentNameException, MissingComponentException, SelfConnectionException
-from uuid import UUID, uuid4 
 
 class PhotonicCircuit:
     """Class representing a photonic circuit composed of components connected to one another. 

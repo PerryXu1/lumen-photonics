@@ -3,9 +3,10 @@ from dataclasses import dataclass
 from typing import MutableSequence, Optional
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
-from lumen.models.light import Light
 from numpy.typing import NDArray
 import numpy as np
+from ..models.light import Light
+
 
 @dataclass(frozen=True, slots=True)
 class DisplaySettings:

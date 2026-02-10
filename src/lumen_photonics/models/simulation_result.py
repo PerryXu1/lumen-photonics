@@ -2,12 +2,12 @@ from collections import defaultdict
 from typing import Literal, MutableSequence
 import numpy as np
 from numpy.typing import NDArray
+from typing import TYPE_CHECKING
 from ..models.model_exceptions import InvalidLightTypeException
 from ..simulation.simulation import Coherence
 from ..models.port import Port
 from ..circuit.component import PortRef
 from ..models.light import IncoherentLight, Light
-from typing import TYPE_CHECKING
 
 # avoids circular import errors from type hinting
 if TYPE_CHECKING:

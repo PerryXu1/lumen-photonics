@@ -3,8 +3,8 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
-from ..models.port import Port, PortConnection, PortType
 from uuid import uuid4
+from ..models.port import Port, PortConnection, PortType
 
 @dataclass(frozen=True, slots=True)
 class PortRef:
